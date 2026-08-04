@@ -1,2 +1,2 @@
 # biblioteca-projeto_curso
-Projeto Full Stack de um sistema de biblioteca
+Projeto Full Stack de um sistema de uma clinica médica.
