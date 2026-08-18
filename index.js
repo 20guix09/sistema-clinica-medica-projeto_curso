@@ -4,28 +4,29 @@ const PORT = process.env.PORT || 3000
 
 app.use(express.json())
 
-// Bancos de dados temporários
-const contas = []
+// Middleware de log — registra toda requisição recebida
+app.use((req, res, next) => {
+  const horario = new Date().toLocaleTimeString('pt-BR')
+  console.log(`[${horario}] ${req.method} ${req.path}`)
+  req.horario = horario  // disponível em todas as rotas
+  next()
+})
 
-const pacientes = [
+// Importar o arquivo de rotas
+const pacientesRoutes = require('./routes/pacientes')
+
+// Registrar com o prefixo do recurso
+app.use('/pacientes', pacientesRoutes)
+
+
+
+// Bancos de dados temporários
+const contas = [
   {
-    id: 1,
-    nome: 'Guilherme',
-    cpf: '12244850927',
-    tel: '43988024099',
-    email: 'guilhermelimadejesus44@gmail.com',
-    nasc: '31/10/2009'
-  },
-  {
-    id: 2,
-    nome: 'Nicole',
-    cpf: '14455365874',
-    tel: '43558421365',
     email: 'nicole@gmail.com',
-    nasc: '15/05/2010'
+    senha: '12345678'
   }
 ]
-
 
 // ========================
 // ROTA INICIAL
@@ -35,127 +36,12 @@ app.get('/', (req, res) => {
   res.send('Finalmente, o projeto da clínica médica está funcionando!')
 })
 
-
-// ========================
-// PACIENTES
-// ========================
-
-// Listar pacientes
-app.get('/pacientes', (req, res) => {
-  res.json(pacientes)
+app.get('/oi', (req, res) => {
+  res.json({
+    status: 'online',
+    horario: req.horario  // veio do middleware
+  })
 })
-
-
-// Cadastrar paciente
-app.post('/pacientes', (req, res) => {
-
-  const {
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-  } = req.body
-
-  const novoPaciente = {
-    id: pacientes.length + 1,
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-  }
-
-  pacientes.push(novoPaciente)
-
-  res.status(201).json(novoPaciente)
-})
-
-
-// Atualizar paciente
-app.put('/pacientes/:id', (req, res) => {
-
-  const id = Number(req.params.id)
-
-  const index = pacientes.findIndex(p => p.id === id)
-
-  if (index === -1) {
-    return res.status(404).json({
-      erro: 'Paciente não encontrado, verifique se foi cadastrado.'
-    })
-  }
-
-  const {
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-  } = req.body
-
-  pacientes[index] = {
-    id,
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-  }
-
-  res.status(200).json(pacientes[index])
-})
-
-
-// Excluir paciente
-app.delete('/pacientes/:id', (req, res) => {
-
-  const id = Number(req.params.id)
-
-  const index = pacientes.findIndex(p => p.id === id)
-
-  if (index === -1) {
-    return res.status(404).json({
-      erro: 'Paciente não encontrado, verifique se foi cadastrado.'
-    })
-  }
-
-  pacientes.splice(index, 1)
-
-  res.status(204).send()
-})
-
 
 // ========================
 // CONTAS
@@ -227,7 +113,7 @@ app.get('/dashboard/summary', (req, res) => {
 
   const resumo = {
     consultasHoje: 18,
-    pacientesCadastrados: 1284,
+    pacientCadastrados: 1284,
     medicosAtivos: 17,
     consultasPendentes: 6
   }
