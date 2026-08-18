@@ -22,81 +22,95 @@ const pacientes = [
 
 //Listar pacientes
 router.get('/', (req, res) => {
-  res.json(paciente)
+  try {
+    res.json(pacientes)
+  } catch (err){
+    next(err)
+  }
 })
 
 //Busca de pacientes
 router.get('/:id', (req, res) => {
-  const id = Number(req.params.id)
+  try {
+    const id = Number(req.params.id)
 
-  console.log('ID recebido:', id)
-  console.log('Pacientes:', pacientes)
+    console.log('ID recebido:', id)
+    console.log('Pacientes:', pacientes)
 
-  const paciente = pacientes.find(p => p.id === id)
+    const paciente = pacientes.find(p => p.id === id)
 
-  if (!paciente) {
-    return res.status(404).json({
-      erro: 'Não encontrado'
-    })
+    if (!paciente) {
+      return res.status(404).json({
+        erro: 'Não encontrado'
+      })
+    }
+
+    res.json(paciente)
+  } catch (err) {
+    next(err)
   }
-
-  res.json(paciente)
 })
 //Cadastrar pacientes
 router.post('/', (req, res) => {
 
-  const {
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-  } = req.body
+  try{
+    const {
+      nome,
+      cpf,
+      nasc,
+      sexo,
+      tel,
+      email,
+      cep,
+      rua,
+      num,
+      comp,
+      bairro,
+      cid,
+      est
+    } = req.body
 
-  const novoPaciente = {
-    id: pacientes.length + 1,
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
+    const novoPaciente = {
+      id: pacientes.length + 1,
+      nome,
+      cpf,
+      nasc,
+      sexo,
+      tel,
+      email,
+      cep,
+      rua,
+      num,
+      comp,
+      bairro,
+      cid,
+      est
+    }
+
+    pacientes.push(novoPaciente)
+
+    res.status(201).json(novoPaciente)
+
+  } catch (err) {
+    next(err)
   }
-
-  pacientes.push(novoPaciente)
-
-  res.status(201).json(novoPaciente)
 })
 
 //Editar pacientes
 router.put('/:id', (req, res) => {
 
-  const id = Number(req.params.id)
+  try{
+    const id = Number(req.params.id)
 
-  const index = pacientes.findIndex(p => p.id === id)
+    const index = pacientes.findIndex(p => p.id === id)
 
-  if (index === -1) {
+    if (index === -1) {
     return res.status(404).json({
       erro: 'Paciente não encontrado, verifique se foi cadastrado.'
     })
-  }
+    }
 
-  const {
+    const {
     nome,
     cpf,
     nasc,
@@ -110,9 +124,9 @@ router.put('/:id', (req, res) => {
     bairro,
     cid,
     est
-  } = req.body
+    } = req.body
 
-  pacientes[index] = {
+    pacientes[index] = {
     id,
     nome,
     cpf,
@@ -127,27 +141,36 @@ router.put('/:id', (req, res) => {
     bairro,
     cid,
     est
-  }
+    }
 
-  res.status(200).json(pacientes[index])
+    res.status(200).json(pacientes[index])
+
+  } catch (err) {
+    next(err)
+  }
 })
 
 //Excluir pacientes
 router.delete('/:id', (req, res) => {
 
-  const id = Number(req.params.id)
-
-  const index = pacientes.findIndex(p => p.id === id)
-
-  if (index === -1) {
-    return res.status(404).json({
-      erro: 'Paciente não encontrado, verifique se foi cadastrado.'
-    })
+  try{
+    const id = Number(req.params.id)
+    
+    const index = pacientes.findIndex(p => p.id === id)
+    
+    if (index === -1) {
+      return res.status(404).json({
+        erro: 'Paciente não encontrado, verifique se foi cadastrado.'
+      })
+    }
+  
+    pacientes.splice(index, 1)
+  
+    res.status(204).send()
+  
+  } catch (err) {
+    next(err)
   }
-
-  pacientes.splice(index, 1)
-
-  res.status(204).send()
 })
 
 module.exports = router //exporta o router para que o index.js possa importá-lo
