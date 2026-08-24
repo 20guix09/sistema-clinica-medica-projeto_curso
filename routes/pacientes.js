@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const db = require('../database') // ../ porque routes/ está uma pasta abaixo da raiz
 
 const pacientes = [
   {
@@ -21,39 +22,29 @@ const pacientes = [
 ]
 
 //Listar pacientes
-router.get('/', (req, res) => {
+// Exemplo com a tabela "produtos" — adapte para o nome do seu recurso
+router.get('/', (req, res, next) => {
   try {
+    const pacientes = db.prepare('SELECT * FROM pacientes').all()
     res.json(pacientes)
-  } catch (err){
+  } catch (err) {
     next(err)
   }
 })
 
 //Busca de pacientes
-router.get('/:id', (req, res) => {
+router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
-
-    console.log('ID recebido:', id)
-    console.log('Pacientes:', pacientes)
-
-    const paciente = pacientes.find(p => p.id === id)
-
-    if (!paciente) {
-      return res.status(404).json({
-        erro: 'Não encontrado'
-      })
-    }
-
-    res.json(paciente)
-  } catch (err) {
-    next(err)
-  }
+    const pacientes = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(id)
+    if (!pacientes) return res.status(404).json({ erro: 'Não encontrado' })
+    res.json(pacientes)
+  } catch (err) { next(err) }
 })
-//Cadastrar pacientes
-router.post('/', (req, res) => {
 
-  try{
+// Cadastrar pacientes
+router.post('/', (req, res, next) => {
+  try {
     const {
       nome,
       cpf,
@@ -70,8 +61,24 @@ router.post('/', (req, res) => {
       est
     } = req.body
 
-    const novoPaciente = {
-      id: pacientes.length + 1,
+    const resultado = db.prepare(`
+      INSERT INTO pacientes (
+        nome,
+        cpf,
+        data_nascimento,
+        sexo,
+        telefone,
+        email,
+        cep,
+        rua,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
       nome,
       cpf,
       nasc,
@@ -85,9 +92,11 @@ router.post('/', (req, res) => {
       bairro,
       cid,
       est
-    }
+    )
 
-    pacientes.push(novoPaciente)
+    const novoPaciente = db.prepare(
+      'SELECT * FROM pacientes WHERE id = ?'
+    ).get(resultado.lastInsertRowid)
 
     res.status(201).json(novoPaciente)
 
