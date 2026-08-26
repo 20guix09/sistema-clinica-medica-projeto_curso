@@ -15,11 +15,26 @@ app.use((req, res, next) => {
   next()
 })
 
-
-// Importar o arquivo de rotas
+// Importar arquivos de rotas
 const pacientesRoutes = require('./routes/pacientes')
-// Registrar com o prefixo do recurso
+const contasRoutes = require('./routes/contas')
+const consultasRoutes = require('./routes/consultas')
+const especialidadeRoutes = require('./routes/especialidade')
+const medicoRoutes = require('./routes/medico')
+const loginRoutes = require('./routes/login')
+const dashboardRoutes = require('./routes/dashboard')
+const authRouter = require('./routes/auth')
+
+// Registrar rotas
 app.use('/pacientes', pacientesRoutes)
+app.use('/contas', contasRoutes)
+app.use('/consultas', consultasRoutes)
+app.use('/especialidade', especialidadeRoutes)
+app.use('/medico', medicoRoutes)
+app.use('/login', loginRoutes)
+app.use('/dashboard', dashboardRoutes)
+app.use('/auth', authRouter)
+
 // Middleware global de erros — deve ter 4 parâmetros exatamente
 app.use((err, req, res, next) => {
   // Registra o erro no terminal para diagnóstico
@@ -31,9 +46,6 @@ app.use((err, req, res, next) => {
 
   res.status(status).json({ erro: mensagem })
 })
-
-
-
 
 //ROTAS INICIAS
 app.get('/', (req, res) => {

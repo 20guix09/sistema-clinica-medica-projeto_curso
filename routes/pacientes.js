@@ -1,27 +1,10 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../database') // ../ porque routes/ está uma pasta abaixo da raiz
+const { validarObrigatorios, validarRange } = require('../helpers/validacao')
 
-const pacientes = [
-  {
-    id: 1,
-    nome: 'Guilherme',
-    cpf: '12244850927',
-    tel: '43988024099',
-    email: 'guilhermelimadejesus44@gmail.com',
-    nasc: '31/10/2009'
-  },
-  {
-    id: 2,
-    nome: 'Nicole',
-    cpf: '14455365874',
-    tel: '43558421365',
-    email: 'nicole@gmail.com',
-    nasc: '15/05/2010'
-  }
-]
 
-//Listar pacientes
+//LISTAR PACIENTES
 // Exemplo com a tabela "produtos" — adapte para o nome do seu recurso
 router.get('/', (req, res, next) => {
   try {
@@ -32,7 +15,7 @@ router.get('/', (req, res, next) => {
   }
 })
 
-//Busca de pacientes
+//BUSCAR PACIENTES
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -42,9 +25,11 @@ router.get('/:id', (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// Cadastrar pacientes
-router.post('/', (req, res, next) => {
+//CADASTRAR PACIENTES
+router.post('/', async (req, res, next) => {
   try {
+    const senha_hash = await bcrypt.hash(senha, 10) //Espera o resultado
+
     const {
       nome,
       cpf,
@@ -105,81 +90,90 @@ router.post('/', (req, res, next) => {
   }
 })
 
-//Editar pacientes
-router.put('/:id', (req, res) => {
-
-  try{
+//EDITAR PACIENTES
+router.put('/:id', (req, res, next) => {
+  try {
     const id = Number(req.params.id)
 
-    const index = pacientes.findIndex(p => p.id === id)
+    const existente = db.prepare(
+      'SELECT * FROM pacientes WHERE id = ?'
+    ).get(id)
 
-    if (index === -1) {
-    return res.status(404).json({
-      erro: 'Paciente não encontrado, verifique se foi cadastrado.'
-    })
+    if (!existente) {
+      return res.status(404).json({
+        erro: 'Paciente não cadastrado'
+      })
     }
 
     const {
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
+      nome,
+      cpf,
+      nasc,
+      sexo,
+      tel,
+      email,
+      cep,
+      rua,
+      num,
+      comp,
+      bairro,
+      cid,
+      est
     } = req.body
 
-    pacientes[index] = {
-    id,
-    nome,
-    cpf,
-    nasc,
-    sexo,
-    tel,
-    email,
-    cep,
-    rua,
-    num,
-    comp,
-    bairro,
-    cid,
-    est
-    }
+    db.prepare(`
+      UPDATE pacientes SET
+        nome = ?,
+        cpf = ?,
+        data_nascimento = ?,
+        sexo = ?,
+        telefone = ?,
+        email = ?,
+        cep = ?,
+        rua = ?,
+        numero = ?,
+        complemento = ?,
+        bairro = ?,
+        cidade = ?,
+        estado = ?
+      WHERE id = ?
+    `).run(
+      nome ?? existente.nome,
+      cpf ?? existente.cpf,
+      nasc ?? existente.data_nascimento,
+      sexo ?? existente.sexo,
+      tel ?? existente.telefone,
+      email ?? existente.email,
+      cep ?? existente.cep,
+      rua ?? existente.rua,
+      num ?? existente.numero,
+      comp ?? existente.complemento,
+      bairro ?? existente.bairro,
+      cid ?? existente.cidade,
+      est ?? existente.estado,
+      id
+    )
 
-    res.status(200).json(pacientes[index])
+    const atualizado = db.prepare(
+      'SELECT * FROM pacientes WHERE id = ?'
+    ).get(id)
+
+    res.json(atualizado)
 
   } catch (err) {
     next(err)
   }
 })
 
-//Excluir pacientes
-router.delete('/:id', (req, res) => {
+//EXCLUIR PACIENTES
+router.delete('/:id', (req, res, next) => {
+  try {
+    const existente = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(req.params.id)
+    if (!existente) return res.status(404).json({ erro: 'Paciente não cadastrado' })
 
-  try{
-    const id = Number(req.params.id)
-    
-    const index = pacientes.findIndex(p => p.id === id)
-    
-    if (index === -1) {
-      return res.status(404).json({
-        erro: 'Paciente não encontrado, verifique se foi cadastrado.'
-      })
-    }
-  
-    pacientes.splice(index, 1)
-  
+    db.prepare('DELETE FROM pacientes WHERE id = ?').run(req.params.id)
     res.status(204).send()
-  
-  } catch (err) {
-    next(err)
-  }
+  } catch (err) { next(err) }
 })
 
-module.exports = router //exporta o router para que o index.js possa importá-lo
+module.exports = router //EXPORTAR O ROUTER PARA QUE O index.js possa importá-lo
