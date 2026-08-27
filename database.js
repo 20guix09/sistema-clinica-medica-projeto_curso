@@ -4,15 +4,13 @@ const db = new Database('banco.db')
 // Ativa o funcionamento das chaves estrangeiras no SQLite
 db.pragma('foreign_keys = ON')
 
-
-// USUÁRIOS / CONTAS
+// CADASTRO
 db.exec(`
   CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    senha TEXT NOT NULL,
-    cpf TEXT NOT NULL UNIQUE
+    email TEXT UNIQUE NOT NULL,
+    senha_hash TEXT NOT NULL
   )
 `)
 
@@ -114,12 +112,5 @@ db.exec(`
   )
 `)
 
-// CADASTRO
-db.exec(`CREATE TABLE IF NOT EXISTS usuarios (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  senha_hash TEXT NOT NULL
-)`)
 
 module.exports = db
