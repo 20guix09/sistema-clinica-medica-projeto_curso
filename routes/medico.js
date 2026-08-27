@@ -1,8 +1,11 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
-const { validarObrigatorios, validarRange } = require('../helpers/validacao')
-
+const {
+  validarObrigatorios,
+  validarLista,
+  emailValido
+} = require('../helpers/validacao')
 
 // LISTAR MÉDICOS
 router.get('/', (req, res, next) => {
@@ -100,6 +103,37 @@ router.post('/', (req, res, next) => {
       disponibilidades
     } = req.body
 
+      const erros = validarObrigatorios(
+        req.body,
+        [
+          'nome',
+          'cpf',
+          'crm',
+          'estado_crm',
+          'telefone',
+          'email',
+          'especialidade_id'
+        ]
+      )
+      
+      if (email && !emailValido(email)) {
+        erros.push('Email com formato inválido')
+      }
+      
+      const erroStatus = validarLista(
+        'status',
+        status,
+        ['ativo', 'inativo']
+      )
+      
+      if (erroStatus) {
+        erros.push(erroStatus)
+      }
+      
+      if (erros.length > 0) {
+        return res.status(400).json({ erros })
+      }
+    
     const especialidade = db.prepare(`
       SELECT id
       FROM especialidades

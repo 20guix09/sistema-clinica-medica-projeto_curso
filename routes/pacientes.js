@@ -1,35 +1,68 @@
 const express = require('express')
 const router = express.Router()
-const db = require('../database') // ../ porque routes/ está uma pasta abaixo da raiz
-const { validarObrigatorios, validarRange } = require('../helpers/validacao')
+
+const db = require('../database')
+
+const {
+  validarObrigatorios,
+  emailValido
+} = require('../helpers/validacao')
 
 
-//LISTAR PACIENTES
-// Exemplo com a tabela "produtos" — adapte para o nome do seu recurso
+// ======================================================
+// LISTAR
+// ======================================================
+
 router.get('/', (req, res, next) => {
   try {
-    const pacientes = db.prepare('SELECT * FROM pacientes').all()
+    const pacientes = db.prepare(`
+      SELECT *
+      FROM pacientes
+      ORDER BY nome
+    `).all()
+
     res.json(pacientes)
+
   } catch (err) {
     next(err)
   }
 })
 
-//BUSCAR PACIENTES
+
+// ======================================================
+// BUSCAR POR ID
+// ======================================================
+
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
-    const pacientes = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(id)
-    if (!pacientes) return res.status(404).json({ erro: 'Não encontrado' })
-    res.json(pacientes)
-  } catch (err) { next(err) }
+
+    const paciente = db.prepare(`
+      SELECT *
+      FROM pacientes
+      WHERE id = ?
+    `).get(id)
+
+    if (!paciente) {
+      return res.status(404).json({
+        erro: 'Paciente não encontrado'
+      })
+    }
+
+    res.json(paciente)
+
+  } catch (err) {
+    next(err)
+  }
 })
 
-//CADASTRAR PACIENTES
-router.post('/', async (req, res, next) => {
-  try {
-    const senha_hash = await bcrypt.hash(senha, 10) //Espera o resultado
 
+// ======================================================
+// CADASTRAR
+// ======================================================
+
+router.post('/', (req, res, next) => {
+  try {
     const {
       nome,
       cpf,
@@ -45,6 +78,31 @@ router.post('/', async (req, res, next) => {
       cid,
       est
     } = req.body
+
+    const erros = validarObrigatorios(
+      req.body,
+      ['nome', 'cpf', 'nasc', 'tel', 'email']
+    )
+
+    if (email && !emailValido(email)) {
+      erros.push('Email com formato inválido')
+    }
+
+    if (erros.length > 0) {
+      return res.status(400).json({ erros })
+    }
+
+    const cpfExistente = db.prepare(`
+      SELECT id
+      FROM pacientes
+      WHERE cpf = ?
+    `).get(cpf)
+
+    if (cpfExistente) {
+      return res.status(409).json({
+        erro: 'CPF já cadastrado'
+      })
+    }
 
     const resultado = db.prepare(`
       INSERT INTO pacientes (
@@ -67,21 +125,23 @@ router.post('/', async (req, res, next) => {
       nome,
       cpf,
       nasc,
-      sexo,
+      sexo ?? null,
       tel,
       email,
-      cep,
-      rua,
-      num,
-      comp,
-      bairro,
-      cid,
-      est
+      cep ?? null,
+      rua ?? null,
+      num ?? null,
+      comp ?? null,
+      bairro ?? null,
+      cid ?? null,
+      est ?? null
     )
 
-    const novoPaciente = db.prepare(
-      'SELECT * FROM pacientes WHERE id = ?'
-    ).get(resultado.lastInsertRowid)
+    const novoPaciente = db.prepare(`
+      SELECT *
+      FROM pacientes
+      WHERE id = ?
+    `).get(resultado.lastInsertRowid)
 
     res.status(201).json(novoPaciente)
 
@@ -90,18 +150,24 @@ router.post('/', async (req, res, next) => {
   }
 })
 
-//EDITAR PACIENTES
+
+// ======================================================
+// EDITAR
+// ======================================================
+
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
 
-    const existente = db.prepare(
-      'SELECT * FROM pacientes WHERE id = ?'
-    ).get(id)
+    const existente = db.prepare(`
+      SELECT *
+      FROM pacientes
+      WHERE id = ?
+    `).get(id)
 
     if (!existente) {
       return res.status(404).json({
-        erro: 'Paciente não cadastrado'
+        erro: 'Paciente não encontrado'
       })
     }
 
@@ -120,6 +186,27 @@ router.put('/:id', (req, res, next) => {
       cid,
       est
     } = req.body
+
+    if (email && !emailValido(email)) {
+      return res.status(400).json({
+        erro: 'Email com formato inválido'
+      })
+    }
+
+    if (cpf) {
+      const cpfExistente = db.prepare(`
+        SELECT id
+        FROM pacientes
+        WHERE cpf = ?
+        AND id != ?
+      `).get(cpf, id)
+
+      if (cpfExistente) {
+        return res.status(409).json({
+          erro: 'CPF já cadastrado'
+        })
+      }
+    }
 
     db.prepare(`
       UPDATE pacientes SET
@@ -154,9 +241,11 @@ router.put('/:id', (req, res, next) => {
       id
     )
 
-    const atualizado = db.prepare(
-      'SELECT * FROM pacientes WHERE id = ?'
-    ).get(id)
+    const atualizado = db.prepare(`
+      SELECT *
+      FROM pacientes
+      WHERE id = ?
+    `).get(id)
 
     res.json(atualizado)
 
@@ -165,15 +254,51 @@ router.put('/:id', (req, res, next) => {
   }
 })
 
-//EXCLUIR PACIENTES
+
+// ======================================================
+// EXCLUIR
+// ======================================================
+
 router.delete('/:id', (req, res, next) => {
   try {
-    const existente = db.prepare('SELECT * FROM pacientes WHERE id = ?').get(req.params.id)
-    if (!existente) return res.status(404).json({ erro: 'Paciente não cadastrado' })
+    const id = Number(req.params.id)
 
-    db.prepare('DELETE FROM pacientes WHERE id = ?').run(req.params.id)
+    const existente = db.prepare(`
+      SELECT id
+      FROM pacientes
+      WHERE id = ?
+    `).get(id)
+
+    if (!existente) {
+      return res.status(404).json({
+        erro: 'Paciente não encontrado'
+      })
+    }
+
+    const consulta = db.prepare(`
+      SELECT id
+      FROM consultas
+      WHERE paciente_id = ?
+      LIMIT 1
+    `).get(id)
+
+    if (consulta) {
+      return res.status(409).json({
+        erro: 'Não é possível excluir um paciente com histórico de consultas'
+      })
+    }
+
+    db.prepare(`
+      DELETE FROM pacientes
+      WHERE id = ?
+    `).run(id)
+
     res.status(204).send()
-  } catch (err) { next(err) }
+
+  } catch (err) {
+    next(err)
+  }
 })
 
-module.exports = router //EXPORTAR O ROUTER PARA QUE O index.js possa importá-lo
+
+module.exports = router

@@ -1,8 +1,12 @@
 const express = require('express')
 const router = express.Router()
-const db = require('../database')
-const { validarObrigatorios, validarRange, emailValido } = require('../helpers/validacao')
 
+const db = require('../database')
+
+const {
+  validarObrigatorios,
+  validarLista
+} = require('../helpers/validacao')
 
 // LISTAR CONTAS
 router.get('/', (req, res, next) => {

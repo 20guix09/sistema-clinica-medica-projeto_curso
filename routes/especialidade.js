@@ -1,7 +1,10 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
-const { validarObrigatorios, validarRange } = require('../helpers/validacao')
+const {
+  validarObrigatorios,
+  validarLista
+} = require('../helpers/validacao')
 
 
 // LISTAR TODAS AS ESPECIALIDADES
@@ -52,6 +55,25 @@ router.post('/', (req, res, next) => {
       descricao,
       status
     } = req.body
+
+      const erros = validarObrigatorios(
+        req.body,
+        ['nome']
+      )
+      
+      const erroStatus = validarLista(
+        'status',
+        status,
+        ['ativo', 'inativo']
+      )
+      
+      if (erroStatus) {
+        erros.push(erroStatus)
+      }
+      
+      if (erros.length > 0) {
+        return res.status(400).json({ erros })
+      }
 
     const resultado = db.prepare(`
       INSERT INTO especialidades (

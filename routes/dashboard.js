@@ -1,7 +1,6 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
-const { validarObrigatorios, validarRange } = require('../helpers/validacao')
 
 
 // CONSULTAS DE HOJE

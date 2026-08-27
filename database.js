@@ -1,10 +1,11 @@
 const Database = require('better-sqlite3')
 const db = new Database('banco.db')
 
-// Ativa o funcionamento das chaves estrangeiras no SQLite
+// Ativa chaves estrangeiras
 db.pragma('foreign_keys = ON')
 
-// CADASTRO
+
+// USUÁRIOS
 db.exec(`
   CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +69,7 @@ db.exec(`
 `)
 
 
-// DIAS E HORÁRIOS DE ATENDIMENTO DOS MÉDICOS
+// DISPONIBILIDADE DOS MÉDICOS
 db.exec(`
   CREATE TABLE IF NOT EXISTS disponibilidades_medicos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,7 +99,6 @@ db.exec(`
     tipo TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pendente',
     observacao TEXT,
-
     motivo_cancelamento TEXT,
 
     FOREIGN KEY (paciente_id)

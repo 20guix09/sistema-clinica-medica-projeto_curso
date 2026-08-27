@@ -1,40 +1,144 @@
-// routes/auth.js
 const express = require('express')
 const router = express.Router()
+
 const db = require('../database')
 const bcrypt = require('bcrypt')
-const { validarObrigatorios, emailValido } = require('../helpers/validacao')
 
-// POST /auth/cadastro
+const {
+  validarObrigatorios,
+  emailValido
+} = require('../helpers/validacao')
+
+
+// CADASTRO
 router.post('/cadastro', async (req, res, next) => {
   try {
-    const { nome, email, senha } = req.body
+    const {
+      nome,
+      email,
+      senha
+    } = req.body
 
-    // Validação dos campos
-    const erros = validarObrigatorios(req.body, ['nome', 'email', 'senha'])
-    if (email && !emailValido(email)) erros.push('email com formato inválido')
-    if (senha && senha.length < 6) erros.push('senha deve ter pelo menos 6 caracteres')
-    if (erros.length > 0) return res.status(400).json({ erros })
+    const erros = validarObrigatorios(
+      req.body,
+      ['nome', 'email', 'senha']
+    )
 
-    // Verificar se email já está cadastrado
-    const existe = db.prepare('SELECT id FROM usuarios WHERE email = ?')
-      .get(email.toLowerCase().trim())
-    if (existe) return res.status(409).json({ erro: 'Email já cadastrado' })
+    if (email && !emailValido(email)) {
+      erros.push('Email com formato inválido')
+    }
 
-    // Gerar o hash da senha (custo 10)
-    const senha_hash = await bcrypt.hash(senha, 10)
+    if (senha && senha.length < 6) {
+      erros.push(
+        'Senha deve ter pelo menos 6 caracteres'
+      )
+    }
 
-    // Salvar o usuário — nunca retornar o senha_hash
-    const resultado = db.prepare(
-      'INSERT INTO usuarios (nome, email, senha_hash) VALUES (?, ?, ?)'
-    ).run(nome.trim(), email.toLowerCase().trim(), senha_hash)
+    if (erros.length > 0) {
+      return res.status(400).json({
+        erros
+      })
+    }
+
+    const emailNormalizado =
+      email.toLowerCase().trim()
+
+    const existe = db.prepare(`
+      SELECT id
+      FROM usuarios
+      WHERE email = ?
+    `).get(emailNormalizado)
+
+    if (existe) {
+      return res.status(409).json({
+        erro: 'Email já cadastrado'
+      })
+    }
+
+    const senha_hash =
+      await bcrypt.hash(senha, 10)
+
+    const resultado = db.prepare(`
+      INSERT INTO usuarios (
+        nome,
+        email,
+        senha_hash
+      )
+      VALUES (?, ?, ?)
+    `).run(
+      nome.trim(),
+      emailNormalizado,
+      senha_hash
+    )
 
     res.status(201).json({
       id: resultado.lastInsertRowid,
       nome: nome.trim(),
-      email: email.toLowerCase().trim()
+      email: emailNormalizado
     })
-  } catch (err) { next(err) }
+
+  } catch (err) {
+    next(err)
+  }
+})
+
+// POST /auth/login
+router.post('/login', async (req, res, next) => {
+  try {
+    const { email, senha } = req.body
+
+    // procura usuário pelo email
+    const usuario = db.prepare(
+      'SELECT * FROM usuarios WHERE email = ?'
+    ).get(email.toLowerCase().trim())
+
+
+    if (!usuario) {
+      return res.status(401).json({
+        erro: 'Email ou senha inválidos'
+      })
+    }
+
+
+    // compara senha digitada com hash salvo
+    const senhaValida = await bcrypt.compare(
+      senha,
+      usuario.senha_hash
+    )
+
+
+    if (!senhaValida) {
+      return res.status(401).json({
+        erro: 'Email ou senha inválidos'
+      })
+    }
+
+
+    // gerar token JWT
+    const jwt = require('jsonwebtoken')
+
+    const token = jwt.sign(
+      {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: '1h'
+      }
+    )
+
+
+    res.json({
+      mensagem: 'Login realizado com sucesso',
+      token
+    })
+
+
+  } catch(err) {
+    next(err)
+  }
 })
 
 module.exports = router

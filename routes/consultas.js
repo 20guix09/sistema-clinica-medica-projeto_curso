@@ -1,14 +1,33 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
-const { validarObrigatorios, validarRange } = require('../helpers/validacao')
+const {
+  validarObrigatorios,
+  validarLista
+} = require('../helpers/validacao')
 
 
 // LISTAR TODAS AS CONSULTAS
 router.get('/', (req, res, next) => {
   try {
     const consultas = db.prepare(`
-      SELECT * FROM consultas
+      SELECT
+        consultas.*,
+        pacientes.nome AS paciente,
+        medicos.nome AS medico,
+        especialidades.nome AS especialidade
+      FROM consultas
+
+      JOIN pacientes
+        ON consultas.paciente_id = pacientes.id
+
+      JOIN medicos
+        ON consultas.medico_id = medicos.id
+
+      JOIN especialidades
+        ON consultas.especialidade_id = especialidades.id
+
+      ORDER BY consultas.data, consultas.horario
     `).all()
 
     res.json(consultas)
@@ -56,7 +75,37 @@ router.post('/', (req, res, next) => {
       status,
       observacao
     } = req.body
+    const erros = validarObrigatorios(
+      req.body,
+      [
+        'paciente_id',
+        'medico_id',
+        'especialidade_id',
+        'data',
+        'horario',
+        'tipo'
+      ]
+    )
 
+    const erroStatus = validarLista(
+      'status',
+      status,
+      [
+        'pendente',
+        'confirmada',
+        'finalizada',
+        'cancelada'
+      ]
+    )
+
+    if (erroStatus) {
+      erros.push(erroStatus)
+    }
+
+    if (erros.length > 0) {
+      return res.status(400).json({ erros })
+    }
+    
     const resultado = db.prepare(`
       INSERT INTO consultas (
         paciente_id,
