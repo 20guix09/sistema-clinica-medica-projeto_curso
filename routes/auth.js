@@ -4,6 +4,8 @@ const router = express.Router()
 const db = require('../database')
 const bcrypt = require('bcrypt')
 
+const jwt = require('jsonwebtoken')
+
 const {
   validarObrigatorios,
   emailValido
@@ -112,10 +114,6 @@ router.post('/login', async (req, res, next) => {
         erro: 'Email ou senha inválidos'
       })
     }
-
-
-    // gerar token JWT
-    const jwt = require('jsonwebtoken')
 
     const token = jwt.sign(
       {

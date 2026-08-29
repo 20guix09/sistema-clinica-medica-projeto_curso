@@ -23,13 +23,17 @@ const medicoRoutes = require('./routes/medico')
 const dashboardRoutes = require('./routes/dashboard')
 const authRouter = require('./routes/auth')
 
-// Registrar rotas
-app.use('/pacientes', pacientesRoutes)
-app.use('/consultas', consultasRoutes)
-app.use('/especialidade', especialidadeRoutes)
-app.use('/medico', medicoRoutes)
-app.use('/dashboard', dashboardRoutes)
+const autenticarToken = require('./middlewares/autenticarToken')
+
+// ROTAS PÚBLICAS
 app.use('/auth', authRouter)
+
+// ROTAS PROTEGIDAS
+app.use('/pacientes', autenticarToken, pacientesRoutes)
+app.use('/consultas', autenticarToken, consultasRoutes)
+app.use('/especialidade', autenticarToken, especialidadeRoutes)
+app.use('/medico', autenticarToken, medicoRoutes)
+app.use('/dashboard', autenticarToken, dashboardRoutes)
 
 // Middleware global de erros — deve ter 4 parâmetros exatamente
 app.use((err, req, res, next) => {
