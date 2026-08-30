@@ -3,23 +3,28 @@ export const ENDPOINTS = {
     cadastro: '/auth/cadastro',
     login: '/auth/login',
   },
+
   dashboard: {
     calendario: '/dashboard/calendario',
     consultasHoje: '/dashboard/consultas-hoje',
     summary: '/dashboard/summary',
   },
+
   pacientes: {
     base: '/pacientes',
     byId: (id) => `/pacientes/${id}`,
   },
+
   medicos: {
-    base: '/medicos',
-    byId: (id) => `/medicos/${id}`,
+    base: '/medico',
+    byId: (id) => `/medico/${id}`,
   },
+
   especialidades: {
     base: '/especialidade',
     byId: (id) => `/especialidade/${id}`,
   },
+
   consultas: {
     base: '/consultas',
     byId: (id) => `/consultas/${id}`,
