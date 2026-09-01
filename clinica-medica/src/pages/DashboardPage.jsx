@@ -30,7 +30,8 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { consultasService } from '../services/consultasService.js';
 import { dashboardService } from '../services/dashboardService.js';
 import { especialidadesService } from '../services/especialidadesService.js';
-import { medicosService } from '../services/medicosService.js';
+import { apiRequest, shouldUseMocks } from '../services/api.js';
+import { mockCrudService } from '../mocks/mockCrudService.js';
 import { pacientesService } from '../services/pacientesService.js';
 import '../styles/dashboard.css';
 
@@ -44,7 +45,9 @@ const navItems = [
 
 const statusTone = {
   Ativo: 'success',
+  ativo: 'success',
   Inativo: 'muted',
+  inativo: 'muted',
   Confirmada: 'success',
   Pendente: 'warning',
   Finalizada: 'info',
@@ -59,6 +62,8 @@ const fieldPlaceholders = {
   dataNascimento: 'Ex.: 29/08/1990',
   crm: 'Ex.: CRM-SP 123456',
   especialidade: 'Ex.: Cardiologia',
+  estado_crm: 'Ex.: PR',
+  especialidade_id: 'Selecione uma especialidade',
   data: 'Ex.: 29/08/2026',
   horario: 'Ex.: 08:30',
   paciente: 'Ex.: Ana Beatriz Costa',
@@ -73,6 +78,49 @@ const resourceNames = {
   especialidades: 'Especialidade',
   medicos: 'Médico',
   pacientes: 'Paciente',
+};
+
+// O backend atual expõe médicos em /medico (singular).
+// Mantemos esta adaptação aqui para não depender de um endpoint incorreto
+// no serviço antigo.
+const medicosService = {
+  list() {
+    return shouldUseMocks()
+      ? mockCrudService.list('medicos')
+      : apiRequest('/medico');
+  },
+
+  getById(id) {
+    return shouldUseMocks()
+      ? mockCrudService.getById('medicos', id)
+      : apiRequest(`/medico/${id}`);
+  },
+
+  create(payload) {
+    return shouldUseMocks()
+      ? mockCrudService.create('medicos', payload)
+      : apiRequest('/medico', {
+          method: 'POST',
+          body: payload,
+        });
+  },
+
+  update(id, payload) {
+    return shouldUseMocks()
+      ? mockCrudService.update('medicos', id, payload)
+      : apiRequest(`/medico/${id}`, {
+          method: 'PUT',
+          body: payload,
+        });
+  },
+
+  remove(id) {
+    return shouldUseMocks()
+      ? mockCrudService.remove('medicos', id)
+      : apiRequest(`/medico/${id}`, {
+          method: 'DELETE',
+        });
+  },
 };
 
 const systemGuide = [
@@ -155,17 +203,24 @@ const pages = {
       ['cpf', 'CPF'],
       ['telefone', 'Telefone'],
       ['email', 'E-mail'],
-      ['status', 'Status'],
     ],
     fields: [
       ['nome', 'Nome'],
       ['cpf', 'CPF'],
-      ['telefone', 'Telefone'],
+      ['tel', 'Telefone'],
       ['email', 'E-mail'],
-      ['dataNascimento', 'Nascimento', 'date'],
-      ['status', 'Status', 'select', ['Ativo', 'Inativo']],
+      ['nasc', 'Nascimento', 'date'],
+      ['sexo', 'Sexo'],
+      ['cep', 'CEP'],
+      ['rua', 'Rua'],
+      ['num', 'Número'],
+      ['comp', 'Complemento'],
+      ['bairro', 'Bairro'],
+      ['cid', 'Cidade'],
+      ['est', 'Estado'],
     ],
   },
+
   '/medicos': {
     resource: 'medicos',
     title: 'Médicos',
@@ -182,13 +237,16 @@ const pages = {
     ],
     fields: [
       ['nome', 'Nome'],
+      ['cpf', 'CPF'],
       ['crm', 'CRM'],
-      ['especialidade', 'Especialidade'],
+      ['estado_crm', 'Estado do CRM'],
+      ['especialidade_id', 'Especialidade', 'specialty'],
       ['telefone', 'Telefone'],
       ['email', 'E-mail'],
-      ['status', 'Status', 'select', ['Ativo', 'Inativo']],
+      ['status', 'Status', 'select', ['ativo', 'inativo']],
     ],
   },
+
   '/consultas': {
     resource: 'consultas',
     title: 'Consultas',
@@ -207,14 +265,15 @@ const pages = {
     fields: [
       ['data', 'Data', 'date'],
       ['horario', 'Horário', 'time'],
-      ['paciente', 'Paciente'],
-      ['medico', 'Médico'],
-      ['especialidade', 'Especialidade'],
+      ['paciente_id', 'Paciente', 'patient'],
+      ['medico_id', 'Médico', 'doctor'],
+      ['especialidade_id', 'Especialidade', 'specialty'],
       ['tipo', 'Tipo'],
-      ['status', 'Status', 'select', ['Pendente', 'Confirmada', 'Finalizada', 'Cancelada']],
+      ['status', 'Status', 'select', ['pendente', 'confirmada', 'finalizada', 'cancelada']],
       ['observacao', 'Observação'],
     ],
   },
+
   '/especialidades': {
     resource: 'especialidades',
     title: 'Especialidades',
@@ -230,7 +289,7 @@ const pages = {
     fields: [
       ['nome', 'Nome'],
       ['descricao', 'Descrição'],
-      ['status', 'Status', 'select', ['Ativo', 'Inativo']],
+      ['status', 'Status', 'select', ['ativo', 'inativo']],
     ],
   },
 };
@@ -254,16 +313,22 @@ export default function DashboardPage() {
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true);
-    const [summaryData, consultasData, calendarioData] = await Promise.all([
-      dashboardService.getSummary(),
-      dashboardService.getConsultasHoje(),
-      dashboardService.getCalendario(),
-    ]);
 
-    setSummary(summaryData);
-    setConsultasHoje(consultasData);
-    setCalendario(calendarioData);
-    setIsLoading(false);
+    try {
+      const [summaryData, consultasData, calendarioData] = await Promise.all([
+        dashboardService.getSummary(),
+        dashboardService.getConsultasHoje(),
+        dashboardService.getCalendario(),
+      ]);
+
+      setSummary(summaryData);
+     setConsultasHoje(consultasData);
+      setCalendario(calendarioData);
+    } catch (error) {
+     console.error('Erro ao carregar dashboard:', error);
+   } finally {
+     setIsLoading(false);
+   }
   }, []);
 
   useEffect(() => {
@@ -563,24 +628,37 @@ function MiniCalendar({ calendario }) {
     setSelectedDay(null);
   }, [initialMonth]);
 
-  const scheduledDays = useMemo(
-    () =>
-      new Map(
-        calendario
-          .filter((day) => {
-            const date = new Date(`${day.data}T12:00:00`);
-            return date.getFullYear() === visibleMonth.getFullYear() && date.getMonth() === visibleMonth.getMonth();
-          })
-          .map((day) => [
-            Number(day.data.split('-')[2]),
-            {
-              consultas: day.consultas,
-              total: day.consultas.length,
-            },
-          ]),
-      ),
-    [calendario, visibleMonth],
-  );
+  const scheduledDays = useMemo(() => {
+  const grouped = new Map();
+
+  calendario.forEach((consulta) => {
+    if (!consulta?.data) return;
+
+    const date = new Date(`${consulta.data}T12:00:00`);
+
+    if (
+      date.getFullYear() !== visibleMonth.getFullYear() ||
+      date.getMonth() !== visibleMonth.getMonth()
+    ) {
+      return;
+    }
+
+    const day = Number(consulta.data.split('-')[2]);
+
+    if (!grouped.has(day)) {
+      grouped.set(day, {
+        consultas: [],
+        total: 0,
+      });
+    }
+
+    grouped.get(day).consultas.push(consulta);
+    grouped.get(day).total += 1;
+  });
+
+  return grouped;
+}, [calendario, visibleMonth]);
+  
   const selectedAppointments = selectedDay ? (scheduledDays.get(selectedDay)?.consultas ?? []) : [];
   const monthLabel = visibleMonth.toLocaleDateString('pt-BR', {
     month: 'long',
@@ -720,18 +798,26 @@ function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
   }
 
   async function handleSave(values) {
-    if (modal?.mode === 'edit') {
-      await config.service.update(modal.item.id, values);
-    } else {
-      await config.service.create({
-        status: config.resource === 'consultas' ? 'Pendente' : 'Ativo',
-        ...values,
-      });
-    }
+    try {
+      if (modal?.mode === 'edit') {
+        await config.service.update(modal.item.id, values);
+      } else {
+        const payload = { ...values };
 
-    setModal(null);
-    await reloadItems();
-    await onDataChange();
+        if (config.resource === 'consultas') {
+          payload.status = payload.status || 'pendente';
+        }
+
+        await config.service.create(payload);
+      }
+
+      setModal(null);
+      await reloadItems();
+      await onDataChange();
+    } catch (error) {
+      console.error(`Erro ao salvar ${config.resource}:`, error);
+      window.alert(error?.message || 'Não foi possível salvar o registro.');
+    }
   }
 
   async function handleDelete(item) {
@@ -819,26 +905,117 @@ function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
 
 function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
   const isView = mode === 'view';
-  const title = mode === 'create' ? config.action : mode === 'edit' ? `Editar ${config.title}` : `Detalhes de ${config.title}`;
+  const title =
+    mode === 'create'
+      ? config.action
+      : mode === 'edit'
+        ? `Editar ${config.title}`
+        : `Detalhes de ${config.title}`;
+
   const [formValues, setFormValues] = useState(() =>
     Object.fromEntries(
       config.fields
-        .filter(([, , type]) => type !== 'select')
+        .filter(([, , type]) => !['select', 'patient', 'doctor', 'specialty'].includes(type))
         .map(([key]) => [key, item[key] ?? '']),
     ),
   );
+
   const [selectValues, setSelectValues] = useState(() =>
     Object.fromEntries(
       config.fields
         .filter(([, , type]) => type === 'select')
-        .map(([key, , , options]) => [key, item[key] ?? options[0]]),
+        .map(([key]) => [key, item[key] ?? '']),
     ),
   );
 
+  const [relationOptions, setRelationOptions] = useState({
+    patient: [],
+    doctor: [],
+    specialty: [],
+  });
+  const [relationValues, setRelationValues] = useState(() => ({
+    patient: item.paciente_id ?? '',
+    doctor: item.medico_id ?? '',
+    specialty: item.especialidade_id ?? '',
+  }));
+  const [isLoadingRelations, setIsLoadingRelations] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRelations() {
+      const relationTypes = config.fields
+        .map(([, , type]) => type)
+        .filter((type) => ['patient', 'doctor', 'specialty'].includes(type));
+
+      if (!relationTypes.length) return;
+
+      setIsLoadingRelations(true);
+
+      try {
+        const requests = relationTypes.map((type) => {
+          if (type === 'patient') return pacientesService.list();
+          if (type === 'doctor') return medicosService.list();
+          return especialidadesService.list();
+        });
+
+        const results = await Promise.all(requests);
+
+        if (!isMounted) return;
+
+        const next = { patient: [], doctor: [], specialty: [] };
+
+        relationTypes.forEach((type, index) => {
+          next[type] = Array.isArray(results[index]) ? results[index] : [];
+        });
+
+        setRelationOptions(next);
+      } catch (error) {
+        console.error('Erro ao carregar opções do formulário:', error);
+      } finally {
+        if (isMounted) setIsLoadingRelations(false);
+      }
+    }
+
+    loadRelations();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [config]);
+
   function handleSubmit(event) {
     event.preventDefault();
+
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+    if (config.resource === 'medicos') {
+      values.especialidade_id = relationValues.specialty;
+    }
+
+    if (config.resource === 'consultas') {
+      values.paciente_id = relationValues.patient;
+      values.medico_id = relationValues.doctor;
+      values.especialidade_id = relationValues.specialty;
+    }
+
+    Object.entries(values).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        values[key] = value.trim();
+      }
+    });
+
     onSave(values);
+  }
+
+  function getRelationLabel(type, option) {
+    if (type === 'patient') return option.nome;
+    if (type === 'doctor') {
+      return option.nome
+        ? `${option.nome}${option.crm ? ` — ${option.crm}` : ''}`
+        : '';
+    }
+    return option.nome;
   }
 
   return (
@@ -856,12 +1033,28 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
 
         {isView ? (
           <div className="detail-summary">
-            {config.fields.map(([key, label]) => (
-              <div className={key === 'observacao' || key === 'descricao' ? 'is-wide' : ''} key={key}>
-                <span>{label}</span>
-                {key === 'status' ? <StatusBadge status={item[key]} /> : <strong>{item[key] || '-'}</strong>}
-              </div>
-            ))}
+            {config.fields.map(([key, label, type]) => {
+              let value = item[key];
+
+              if (type === 'patient') value = item.paciente ?? item.paciente_id;
+              if (type === 'doctor') value = item.medico ?? item.medico_id;
+              if (type === 'specialty') value = item.especialidade ?? item.especialidade_id;
+
+              return (
+                <div
+                  className={key === 'observacao' || key === 'descricao' ? 'is-wide' : ''}
+                  key={key}
+                >
+                  <span>{label}</span>
+                  {key === 'status' ? (
+                    <StatusBadge status={item[key]} />
+                  ) : (
+                    <strong>{value || '-'}</strong>
+                  )}
+                </div>
+              );
+            })}
+
             <div className="modal-actions">
               <button type="button" onClick={onClose}>
                 Fechar
@@ -873,12 +1066,33 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
             {config.fields.map(([key, label, type = 'text', options]) => (
               <label key={key}>
                 <span>{label}</span>
+
                 {type === 'select' ? (
                   <FieldSelect
                     name={key}
                     options={options}
                     value={selectValues[key]}
-                    onChange={(value) => setSelectValues((current) => ({ ...current, [key]: value }))}
+                    onChange={(value) =>
+                      setSelectValues((current) => ({
+                        ...current,
+                        [key]: value,
+                      }))
+                    }
+                  />
+                ) : ['patient', 'doctor', 'specialty'].includes(type) ? (
+                  <RelationSelect
+                    name={key}
+                    relationType={type}
+                    options={relationOptions[type]}
+                    value={relationValues[type]}
+                    disabled={isLoadingRelations}
+                    onChange={(value) =>
+                      setRelationValues((current) => ({
+                        ...current,
+                        [type]: value,
+                      }))
+                    }
+                    getLabel={getRelationLabel}
                   />
                 ) : (
                   <div className="modal-input-wrap">
@@ -887,21 +1101,27 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                         name={key}
                         value={formValues[key] ?? ''}
                         placeholder={fieldPlaceholders[key]}
-                        onChange={(event) => setFormValues((current) => ({ ...current, [key]: event.target.value }))}
+                        onChange={(event) =>
+                          setFormValues((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
                       />
                     ) : (
                       <input
                         name={key}
                         type={type}
                         value={formValues[key] ?? ''}
-                        className={!formValues[key] && type !== 'text' ? 'is-empty' : undefined}
                         placeholder={fieldPlaceholders[key]}
-                        onChange={(event) => setFormValues((current) => ({ ...current, [key]: event.target.value }))}
+                        onChange={(event) =>
+                          setFormValues((current) => ({
+                            ...current,
+                            [key]: event.target.value,
+                          }))
+                        }
                       />
                     )}
-                    {(type === 'date' || type === 'time') && !formValues[key] ? (
-                      <span className="date-placeholder">{fieldPlaceholders[key]}</span>
-                    ) : null}
                   </div>
                 )}
               </label>
@@ -918,6 +1138,81 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
           </form>
         )}
       </section>
+    </div>
+  );
+}
+
+function RelationSelect({
+  name,
+  relationType,
+  options,
+  value,
+  disabled,
+  onChange,
+  getLabel,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    function handleOutsideClick(event) {
+      if (!selectRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isOpen]);
+
+  const selected = options.find((option) => String(option.id) === String(value));
+  const selectedLabel = selected ? getLabel(relationType, selected) : 'Selecione uma opção';
+
+  return (
+    <div className={`modal-select ${isOpen ? 'is-open' : ''}`} ref={selectRef}>
+      <input type="hidden" name={name} value={value ?? ''} />
+
+      <button
+        className="modal-select-trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span>{disabled ? 'Carregando...' : selectedLabel}</span>
+        {isOpen ? (
+          <ChevronUp size={17} strokeWidth={1.7} />
+        ) : (
+          <ChevronDown size={17} strokeWidth={1.7} />
+        )}
+      </button>
+
+      {isOpen ? (
+        <div className="modal-select-menu" role="listbox" aria-label={name}>
+          {options.length ? (
+            options.map((option) => (
+              <button
+                className={String(option.id) === String(value) ? 'is-selected' : ''}
+                key={option.id}
+                type="button"
+                role="option"
+                aria-selected={String(option.id) === String(value)}
+                onClick={() => {
+                  onChange(String(option.id));
+                  setIsOpen(false);
+                }}
+              >
+                {getLabel(relationType, option)}
+              </button>
+            ))
+          ) : (
+            <span className="modal-select-empty">Nenhuma opção cadastrada.</span>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -55,10 +55,17 @@ export async function apiRequest(endpoint, options = {}) {
     const data = await parseResponse(response);
 
     if (!response.ok) {
-      throw new ApiError(data?.mensagem || data?.message || 'Erro na requisicao.', {
+      throw new ApiError(
+        data?.erro ||
+         data?.mensagem ||
+         data?.message ||
+          (Array.isArray(data?.erros) ? data.erros.join(', ') : null) ||
+        'Erro na requisicao.',
+        {
         status: response.status,
-        data,
-      });
+         data,
+        }
+      );
     }
 
     return data;
