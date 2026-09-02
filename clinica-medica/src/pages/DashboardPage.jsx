@@ -8,7 +8,6 @@ import {
   ChevronUp,
   Edit3,
   Eye,
-  HeartPulse,
   History,
   Info,
   LayoutDashboard,
@@ -57,9 +56,24 @@ const statusTone = {
 const fieldPlaceholders = {
   nome: 'Ex.: Mariana Oliveira',
   cpf: 'Ex.: 123.456.789-01',
+  tel: 'Ex.: (11) 99999-1234',
   telefone: 'Ex.: (11) 99999-1234',
   email: 'Ex.: exemplo@e-mail.com',
+  nasc: 'Ex.: 29/08/1990',
   dataNascimento: 'Ex.: 29/08/1990',
+  data_nascimento: 'Ex.: 29/08/1990',
+  sexo: 'Ex.: Masculino',
+  cep: 'Ex.: 86000-000',
+  rua: 'Ex.: Rua das Flores',
+  num: 'Ex.: 120',
+  numero: 'Ex.: 120',
+  comp: 'Ex.: Apto. 12',
+  complemento: 'Ex.: Apto. 12',
+  bairro: 'Ex.: Centro',
+  cid: 'Ex.: Londrina',
+  cidade: 'Ex.: Londrina',
+  est: 'Ex.: PR',
+  estado: 'Ex.: PR',
   crm: 'Ex.: CRM-SP 123456',
   especialidade: 'Ex.: Cardiologia',
   estado_crm: 'Ex.: PR',
@@ -79,6 +93,27 @@ const resourceNames = {
   medicos: 'Médico',
   pacientes: 'Paciente',
 };
+
+const pacienteAliases = {
+  telefone: ['telefone', 'tel'],
+  data_nascimento: ['data_nascimento', 'nasc', 'dataNascimento'],
+  numero: ['numero', 'num'],
+  complemento: ['complemento', 'comp'],
+  cidade: ['cidade', 'cid'],
+  estado: ['estado', 'est'],
+};
+
+function getResourceFieldValue(resource, key, item = {}) {
+  if (resource === 'pacientes' && pacienteAliases[key]) {
+    for (const alias of pacienteAliases[key]) {
+      const value = item?.[alias];
+      if (value !== undefined && value !== null && value !== '') return value;
+    }
+    return '';
+  }
+
+  return item?.[key] ?? '';
+}
 
 // O backend atual expõe médicos em /medico (singular).
 // Mantemos esta adaptação aqui para não depender de um endpoint incorreto
@@ -196,7 +231,8 @@ const pages = {
     title: 'Pacientes',
     subtitle: 'Cadastros, contatos e histórico da base atendida',
     action: 'Novo paciente',
-    search: 'Pesquisar por nome, CPF, telefone ou email',
+    search: 'Pesquisar por nome, CPF, telefone, e-mail, CEP ou endereço',
+    searchKeys: ['nome', 'cpf', 'telefone', 'email', 'cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'estado'],
     service: pacientesService,
     columns: [
       ['nome', 'Paciente'],
@@ -207,17 +243,17 @@ const pages = {
     fields: [
       ['nome', 'Nome'],
       ['cpf', 'CPF'],
-      ['tel', 'Telefone'],
+      ['telefone', 'Telefone'],
       ['email', 'E-mail'],
-      ['nasc', 'Nascimento', 'date'],
+      ['data_nascimento', 'Nascimento', 'date'],
       ['sexo', 'Sexo'],
       ['cep', 'CEP'],
       ['rua', 'Rua'],
-      ['num', 'Número'],
-      ['comp', 'Complemento'],
+      ['numero', 'Número'],
+      ['complemento', 'Complemento'],
       ['bairro', 'Bairro'],
-      ['cid', 'Cidade'],
-      ['est', 'Estado'],
+      ['cidade', 'Cidade'],
+      ['estado', 'Estado'],
     ],
   },
 
@@ -226,7 +262,8 @@ const pages = {
     title: 'Médicos',
     subtitle: 'Profissionais, especialidades e disponibilidade da clínica',
     action: 'Novo médico',
-    search: 'Pesquisar por nome, CRM ou e-mail',
+    search: 'Pesquisar por nome, CPF, CRM, e-mail ou especialidade',
+    searchKeys: ['nome', 'cpf', 'crm', 'estado_crm', 'telefone', 'email', 'especialidade', 'status'],
     service: medicosService,
     columns: [
       ['nome', 'Profissional'],
@@ -252,7 +289,8 @@ const pages = {
     title: 'Consultas',
     subtitle: 'Atendimentos agendados e status operacional',
     action: 'Nova consulta',
-    search: 'Pesquisar por paciente ou médico',
+    search: 'Pesquisar por paciente, médico, especialidade, data ou status',
+    searchKeys: ['paciente', 'medico', 'especialidade', 'data', 'horario', 'tipo', 'status', 'observacao'],
     service: consultasService,
     columns: [
       ['data', 'Data'],
@@ -279,7 +317,12 @@ const pages = {
     title: 'Especialidades',
     subtitle: 'Áreas de atendimento oferecidas pela clínica',
     action: 'Nova especialidade',
-    search: 'Pesquisar especialidade',
+    search: 'Pesquisar por nome, descrição ou status',
+    searchKeys: ['nome', 'descricao', 'status'],
+    placeholders: {
+      nome: 'Ex.: Cardiologista',
+      descricao: 'Ex.: Atendimento especializado em prevenção, diagnóstico e acompanhamento de doenças do coração.',
+    },
     service: especialidadesService,
     columns: [
       ['nome', 'Especialidade'],
@@ -305,7 +348,16 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [systemModal, setSystemModal] = useState(null);
-  const [deletedHistory, setDeletedHistory] = useState([]);
+  const historyStorageKey = `medagenda:deleted-history:${user?.id ?? user?.email ?? 'usuario'}`;
+  const [deletedHistory, setDeletedHistory] = useState(() => {
+    try {
+      const salvo = window.localStorage.getItem(historyStorageKey);
+
+      return salvo ? JSON.parse(salvo) : [];
+    } catch {
+      return [];
+    }
+  });
   const [topbarGreeting, setTopbarGreeting] = useState('');
   const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
@@ -353,6 +405,29 @@ export default function DashboardPage() {
     const timer = window.setTimeout(() => setToastMessage(''), 3200);
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        historyStorageKey,
+        JSON.stringify(deletedHistory)
+      );
+    } catch (error) {
+      console.error('Erro ao salvar histórico:', error);
+    }
+  }, [deletedHistory, historyStorageKey]);
+
+  useEffect(() => {
+    try {
+      const salvo = window.localStorage.getItem(historyStorageKey);
+    
+      setDeletedHistory(
+        salvo ? JSON.parse(salvo) : []
+      );
+    } catch {
+      setDeletedHistory([]);
+    }
+  }, [historyStorageKey]);
 
   function handleRecordDeleted(entry) {
     setDeletedHistory((current) => [
@@ -405,7 +480,7 @@ export default function DashboardPage() {
       <aside className={`app-sidebar ${isMobileMenuOpen ? 'is-open' : ''}`}>
         <div className="app-brand" aria-label="MedAgenda">
           <div className="app-brand-mark">
-            <HeartPulse size={22} strokeWidth={1.75} />
+            <img src="/logo-medAgenda.png" alt="" />
           </div>
           <strong>
             <span>Med</span>Agenda
@@ -779,22 +854,41 @@ function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
 
     if (!search) return items;
 
-    return items.filter((item) =>
-      Object.values(item).some((value) =>
-        String(value ?? '')
+    return items.filter((item) => {
+      const searchableKeys = config.searchKeys ?? Object.keys(item ?? {});
+
+      return searchableKeys.some((key) =>
+        String(item?.[key] ?? '')
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
           .toLowerCase()
           .includes(search),
-      ),
-    );
-  }, [items, query]);
+      );
+    });
+  }, [items, query, config.searchKeys]);
 
   async function reloadItems() {
     setIsLoading(true);
     const data = await config.service.list();
     setItems(data);
     setIsLoading(false);
+  }
+
+  async function openModal(mode, item = null) {
+    if (mode === 'create' || !item?.id) {
+      setModal({ mode, item: item ?? {} });
+      return;
+    }
+
+    try {
+      // Busca o registro completo antes de visualizar/editar.
+      // Assim campos que não aparecem na tabela continuam disponíveis no modal.
+      const completo = await config.service.getById(item.id);
+      setModal({ mode, item: completo ?? item });
+    } catch (error) {
+      console.error(`Erro ao carregar ${config.resource}:`, error);
+      setModal({ mode, item });
+    }
   }
 
   async function handleSave(values) {
@@ -839,7 +933,7 @@ function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
           <h1>{config.title}</h1>
           <span>{config.subtitle}</span>
         </div>
-        <button className="dashboard-primary-action interactive-press" type="button" onClick={() => setModal({ mode: 'create' })}>
+        <button className="dashboard-primary-action interactive-press" type="button" onClick={() => openModal('create')}>
           <Plus size={18} strokeWidth={1.7} />
           <span>{config.action}</span>
         </button>
@@ -872,10 +966,10 @@ function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
                   ))}
                   <td>
                     <div className="resource-actions">
-                      <button type="button" aria-label="Visualizar" onClick={() => setModal({ mode: 'view', item })}>
+                      <button type="button" aria-label="Visualizar" onClick={() => openModal('view', item)}>
                         <Eye size={16} strokeWidth={1.65} />
                       </button>
-                      <button type="button" aria-label="Editar" onClick={() => setModal({ mode: 'edit', item })}>
+                      <button type="button" aria-label="Editar" onClick={() => openModal('edit', item)}>
                         <Edit3 size={16} strokeWidth={1.65} />
                       </button>
                       <button type="button" aria-label="Excluir" onClick={() => handleDelete(item)}>
@@ -909,14 +1003,14 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     mode === 'create'
       ? config.action
       : mode === 'edit'
-        ? `Editar ${config.title}`
-        : `Detalhes de ${config.title}`;
+        ? `Editar ${resourceNames[config.resource] ?? config.title}`
+        : `Detalhes de ${resourceNames[config.resource] ?? config.title}`;
 
   const [formValues, setFormValues] = useState(() =>
     Object.fromEntries(
       config.fields
         .filter(([, , type]) => !['select', 'patient', 'doctor', 'specialty'].includes(type))
-        .map(([key]) => [key, item[key] ?? '']),
+        .map(([key]) => [key, getResourceFieldValue(config.resource, key, item)]),
     ),
   );
 
@@ -924,7 +1018,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     Object.fromEntries(
       config.fields
         .filter(([, , type]) => type === 'select')
-        .map(([key]) => [key, item[key] ?? '']),
+        .map(([key, , , options]) => [key, item[key] ?? options?.[0] ?? '']),
     ),
   );
 
@@ -1034,7 +1128,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
         {isView ? (
           <div className="detail-summary">
             {config.fields.map(([key, label, type]) => {
-              let value = item[key];
+              let value = getResourceFieldValue(config.resource, key, item);
 
               if (type === 'patient') value = item.paciente ?? item.paciente_id;
               if (type === 'doctor') value = item.medico ?? item.medico_id;
@@ -1100,7 +1194,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                       <textarea
                         name={key}
                         value={formValues[key] ?? ''}
-                        placeholder={fieldPlaceholders[key]}
+                        placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
                         onChange={(event) =>
                           setFormValues((current) => ({
                             ...current,
@@ -1113,7 +1207,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                         name={key}
                         type={type}
                         value={formValues[key] ?? ''}
-                        placeholder={fieldPlaceholders[key]}
+                        placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
                         onChange={(event) =>
                           setFormValues((current) => ({
                             ...current,

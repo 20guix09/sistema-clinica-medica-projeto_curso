@@ -10,11 +10,7 @@ const {
   emailValido
 } = require('../helpers/validacao')
 
-// ==========================================
 // CADASTRO
-// POST /auth/cadastro
-// ==========================================
-
 router.post('/cadastro', async (req, res, next) => {
   try {
     const {
@@ -87,11 +83,7 @@ router.post('/cadastro', async (req, res, next) => {
   }
 })
 
-// ==========================================
 // LOGIN
-// POST /auth/login
-// ==========================================
-
 router.post('/login', async (req, res, next) => {
   try {
     const {

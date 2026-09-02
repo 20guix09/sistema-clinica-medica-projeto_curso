@@ -36,14 +36,19 @@
 
 .app-brand-mark {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   place-items: center;
-  border-radius: 16px;
-  color: var(--text-inverse);
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
-  animation: pulse-ring 2.8s ease-out infinite;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
+}
+
+.app-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .app-brand strong {
@@ -717,6 +722,16 @@
   font-size: 0.94rem;
 }
 
+.resource-table th:last-child,
+.resource-table td:last-child {
+  width: 132px;
+  min-width: 132px;
+  max-width: 132px;
+  text-align: center !important;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
 .resource-table tbody tr {
   transition: background var(--transition-fast);
 }
@@ -727,8 +742,11 @@
 
 .resource-actions {
   display: flex;
-  justify-content: flex-end;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
   gap: 7px;
+  margin: 0 auto;
 }
 
 .resource-actions button {
@@ -1012,12 +1030,26 @@
 .detail-summary div {
   display: grid;
   gap: 6px;
+
+  /* Tamanho normal mínimo */
   min-height: 74px;
+  height: auto;
+
   align-content: center;
   padding: 14px;
+
   border: 1px solid rgba(0, 119, 182, 0.1);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.54);
+  overflow: visible;
+  min-width: 0;
+}
+
+.detail-summary div strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .detail-summary div.is-wide {

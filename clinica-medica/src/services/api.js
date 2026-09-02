@@ -55,45 +55,43 @@ export async function apiRequest(endpoint, options = {}) {
     const data = await parseResponse(response);
 
     if (!response.ok) {
-      throw new ApiError(
-        data?.erro ||
-         data?.mensagem ||
-         data?.message ||
-          (Array.isArray(data?.erros) ? data.erros.join(', ') : null) ||
-        'Erro na requisicao.',
-        {
+      const message =
+        data?.erro ??
+        data?.mensagem ??
+        data?.message ??
+        (Array.isArray(data?.erros) ? data.erros.join(', ') : null) ??
+        (typeof data === 'string' && data.trim() ? data : null) ??
+        `Erro na requisição (${response.status}).`;
+
+      throw new ApiError(message, {
         status: response.status,
-         data,
-        }
-      );
+        data,
+      });
     }
 
     return data;
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new ApiError('A requisicao demorou mais que o esperado.', { status: 408 });
+      throw new ApiError('A requisição demorou mais que o esperado.', { status: 408 });
     }
 
     if (error instanceof ApiError) {
       throw error;
     }
 
-    throw new ApiError('Não foi possível conectar ao servidor.', { status: 0, data: error });
+    throw new ApiError('Não foi possível conectar ao servidor.', {
+      status: 0,
+      data: error,
+    });
   } finally {
     clearTimeout(timeoutId);
   }
 }
 
 async function parseResponse(response) {
-  if (response.status === 204) {
-    return null;
-  }
+  if (response.status === 204) return null;
 
   const contentType = response.headers.get('content-type') ?? '';
-
-  if (contentType.includes('application/json')) {
-    return response.json();
-  }
-
+  if (contentType.includes('application/json')) return response.json();
   return response.text();
 }

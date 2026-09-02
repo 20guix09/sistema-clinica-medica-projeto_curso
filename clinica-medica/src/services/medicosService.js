@@ -35,8 +35,13 @@ export const medicosService = {
       : apiRequest(ENDPOINTS.medicos.byId(id), { method: 'PUT', body: payload });
   },
 
-  toggleStatus(id) {
-    return mockCrudService.toggleStatus(resource, id);
+  toggleStatus(id, status) {
+    return shouldUseMocks()
+      ? mockCrudService.toggleStatus(resource, id)
+      : apiRequest(ENDPOINTS.medicos.status(id), {
+          method: 'PATCH',
+          body: { status },
+        });
   },
 
   remove(id) {

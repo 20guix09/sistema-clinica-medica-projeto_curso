@@ -18,6 +18,7 @@ export const ENDPOINTS = {
   medicos: {
     base: '/medico',
     byId: (id) => `/medico/${id}`,
+    status: (id) => `/medico/${id}/status`,
   },
 
   especialidades: {
