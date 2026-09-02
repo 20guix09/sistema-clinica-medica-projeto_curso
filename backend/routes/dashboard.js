@@ -3,10 +3,14 @@ const router = express.Router()
 
 const db = require('../database')
 
+// ======================================================
+// CONSULTAS DE HOJE — SOMENTE DO USUÁRIO LOGADO
+// ======================================================
 
-// CONSULTAS DE HOJE
 router.get('/consultas-hoje', (req, res, next) => {
   try {
+    const usuarioId = req.usuario.id
+
     const consultasHoje = db.prepare(`
       SELECT
         consultas.id,
@@ -24,17 +28,21 @@ router.get('/consultas-hoje', (req, res, next) => {
 
       JOIN pacientes
         ON consultas.paciente_id = pacientes.id
+        AND pacientes.usuario_id = consultas.usuario_id
 
       JOIN medicos
         ON consultas.medico_id = medicos.id
+        AND medicos.usuario_id = consultas.usuario_id
 
       JOIN especialidades
         ON consultas.especialidade_id = especialidades.id
+        AND especialidades.usuario_id = consultas.usuario_id
 
       WHERE DATE(consultas.data) = DATE('now', 'localtime')
+      AND consultas.usuario_id = ?
 
       ORDER BY consultas.horario
-    `).all()
+    `).all(usuarioId)
 
     res.status(200).json(consultasHoje)
 
@@ -43,10 +51,14 @@ router.get('/consultas-hoje', (req, res, next) => {
   }
 })
 
+// ======================================================
+// CALENDÁRIO — SOMENTE DO USUÁRIO LOGADO
+// ======================================================
 
-// CALENDÁRIO
 router.get('/calendario', (req, res, next) => {
   try {
+    const usuarioId = req.usuario.id
+
     const consultas = db.prepare(`
       SELECT
         consultas.id,
@@ -63,15 +75,20 @@ router.get('/calendario', (req, res, next) => {
 
       JOIN pacientes
         ON consultas.paciente_id = pacientes.id
+        AND pacientes.usuario_id = consultas.usuario_id
 
       JOIN medicos
         ON consultas.medico_id = medicos.id
+        AND medicos.usuario_id = consultas.usuario_id
 
       JOIN especialidades
         ON consultas.especialidade_id = especialidades.id
+        AND especialidades.usuario_id = consultas.usuario_id
+
+      WHERE consultas.usuario_id = ?
 
       ORDER BY consultas.data, consultas.horario
-    `).all()
+    `).all(usuarioId)
 
     res.status(200).json(consultas)
 
@@ -80,37 +97,40 @@ router.get('/calendario', (req, res, next) => {
   }
 })
 
+// ======================================================
+// RESUMO — SOMENTE DO USUÁRIO LOGADO
+// ======================================================
 
-// RESUMO DO DASHBOARD
 router.get('/summary', (req, res, next) => {
   try {
+    const usuarioId = req.usuario.id
 
-    // Conta quantas consultas existem hoje
     const consultasHoje = db.prepare(`
       SELECT COUNT(*) AS total
       FROM consultas
-      WHERE DATE(data) = DATE('now', 'localtime')
-    `).get()
+      WHERE usuario_id = ?
+      AND DATE(data) = DATE('now', 'localtime')
+    `).get(usuarioId)
 
-    // Conta todos os pacientes cadastrados
     const pacientesCadastrados = db.prepare(`
       SELECT COUNT(*) AS total
       FROM pacientes
-    `).get()
+      WHERE usuario_id = ?
+    `).get(usuarioId)
 
-    // Conta somente médicos ativos
     const medicosAtivos = db.prepare(`
       SELECT COUNT(*) AS total
       FROM medicos
-      WHERE status = 'ativo'
-    `).get()
+      WHERE usuario_id = ?
+      AND status = 'ativo'
+    `).get(usuarioId)
 
-    // Conta consultas pendentes
     const consultasPendentes = db.prepare(`
       SELECT COUNT(*) AS total
       FROM consultas
-      WHERE status = 'pendente'
-    `).get()
+      WHERE usuario_id = ?
+      AND status = 'pendente'
+    `).get(usuarioId)
 
     const resumo = {
       consultasHoje: consultasHoje.total,
@@ -125,6 +145,5 @@ router.get('/summary', (req, res, next) => {
     next(err)
   }
 })
-
 
 module.exports = router

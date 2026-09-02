@@ -8,18 +8,20 @@ const {
   emailValido
 } = require('../helpers/validacao')
 
-
 // ======================================================
-// LISTAR
+// LISTAR PACIENTES DO USUÁRIO LOGADO
 // ======================================================
 
 router.get('/', (req, res, next) => {
   try {
+    const usuarioId = req.usuario.id
+
     const pacientes = db.prepare(`
       SELECT *
       FROM pacientes
+      WHERE usuario_id = ?
       ORDER BY nome
-    `).all()
+    `).all(usuarioId)
 
     res.json(pacientes)
 
@@ -28,20 +30,21 @@ router.get('/', (req, res, next) => {
   }
 })
 
-
 // ======================================================
-// BUSCAR POR ID
+// BUSCAR PACIENTE POR ID
 // ======================================================
 
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    const usuarioId = req.usuario.id
 
     const paciente = db.prepare(`
       SELECT *
       FROM pacientes
       WHERE id = ?
-    `).get(id)
+      AND usuario_id = ?
+    `).get(id, usuarioId)
 
     if (!paciente) {
       return res.status(404).json({
@@ -56,13 +59,14 @@ router.get('/:id', (req, res, next) => {
   }
 })
 
-
 // ======================================================
-// CADASTRAR
+// CADASTRAR PACIENTE
 // ======================================================
 
 router.post('/', (req, res, next) => {
   try {
+    const usuarioId = req.usuario.id
+
     const {
       nome,
       cpf,
@@ -92,11 +96,13 @@ router.post('/', (req, res, next) => {
       return res.status(400).json({ erros })
     }
 
+    // CPF só precisa ser único dentro da conta
     const cpfExistente = db.prepare(`
       SELECT id
       FROM pacientes
       WHERE cpf = ?
-    `).get(cpf)
+      AND usuario_id = ?
+    `).get(cpf, usuarioId)
 
     if (cpfExistente) {
       return res.status(409).json({
@@ -118,9 +124,10 @@ router.post('/', (req, res, next) => {
         complemento,
         bairro,
         cidade,
-        estado
+        estado,
+        usuario_id
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       nome,
       cpf,
@@ -134,14 +141,16 @@ router.post('/', (req, res, next) => {
       comp ?? null,
       bairro ?? null,
       cid ?? null,
-      est ?? null
+      est ?? null,
+      usuarioId
     )
 
     const novoPaciente = db.prepare(`
       SELECT *
       FROM pacientes
       WHERE id = ?
-    `).get(resultado.lastInsertRowid)
+      AND usuario_id = ?
+    `).get(resultado.lastInsertRowid, usuarioId)
 
     res.status(201).json(novoPaciente)
 
@@ -150,20 +159,21 @@ router.post('/', (req, res, next) => {
   }
 })
 
-
 // ======================================================
-// EDITAR
+// EDITAR PACIENTE
 // ======================================================
 
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    const usuarioId = req.usuario.id
 
     const existente = db.prepare(`
       SELECT *
       FROM pacientes
       WHERE id = ?
-    `).get(id)
+      AND usuario_id = ?
+    `).get(id, usuarioId)
 
     if (!existente) {
       return res.status(404).json({
@@ -198,8 +208,9 @@ router.put('/:id', (req, res, next) => {
         SELECT id
         FROM pacientes
         WHERE cpf = ?
+        AND usuario_id = ?
         AND id != ?
-      `).get(cpf, id)
+      `).get(cpf, usuarioId, id)
 
       if (cpfExistente) {
         return res.status(409).json({
@@ -224,6 +235,7 @@ router.put('/:id', (req, res, next) => {
         cidade = ?,
         estado = ?
       WHERE id = ?
+      AND usuario_id = ?
     `).run(
       nome ?? existente.nome,
       cpf ?? existente.cpf,
@@ -238,14 +250,16 @@ router.put('/:id', (req, res, next) => {
       bairro ?? existente.bairro,
       cid ?? existente.cidade,
       est ?? existente.estado,
-      id
+      id,
+      usuarioId
     )
 
     const atualizado = db.prepare(`
       SELECT *
       FROM pacientes
       WHERE id = ?
-    `).get(id)
+      AND usuario_id = ?
+    `).get(id, usuarioId)
 
     res.json(atualizado)
 
@@ -254,20 +268,21 @@ router.put('/:id', (req, res, next) => {
   }
 })
 
-
 // ======================================================
-// EXCLUIR
+// EXCLUIR PACIENTE
 // ======================================================
 
 router.delete('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    const usuarioId = req.usuario.id
 
     const existente = db.prepare(`
       SELECT id
       FROM pacientes
       WHERE id = ?
-    `).get(id)
+      AND usuario_id = ?
+    `).get(id, usuarioId)
 
     if (!existente) {
       return res.status(404).json({
@@ -279,8 +294,9 @@ router.delete('/:id', (req, res, next) => {
       SELECT id
       FROM consultas
       WHERE paciente_id = ?
+      AND usuario_id = ?
       LIMIT 1
-    `).get(id)
+    `).get(id, usuarioId)
 
     if (consulta) {
       return res.status(409).json({
@@ -291,7 +307,8 @@ router.delete('/:id', (req, res, next) => {
     db.prepare(`
       DELETE FROM pacientes
       WHERE id = ?
-    `).run(id)
+      AND usuario_id = ?
+    `).run(id, usuarioId)
 
     res.status(204).send()
 
@@ -299,6 +316,5 @@ router.delete('/:id', (req, res, next) => {
     next(err)
   }
 })
-
 
 module.exports = router
