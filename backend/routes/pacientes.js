@@ -8,10 +8,7 @@ const {
   emailValido
 } = require('../helpers/validacao')
 
-// ======================================================
 // LISTAR PACIENTES DO USUÁRIO LOGADO
-// ======================================================
-
 router.get('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -30,10 +27,7 @@ router.get('/', (req, res, next) => {
   }
 })
 
-// ======================================================
 // BUSCAR PACIENTE POR ID
-// ======================================================
-
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -59,10 +53,7 @@ router.get('/:id', (req, res, next) => {
   }
 })
 
-// ======================================================
 // CADASTRAR PACIENTE
-// ======================================================
-
 router.post('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -159,10 +150,7 @@ router.post('/', (req, res, next) => {
   }
 })
 
-// ======================================================
 // EDITAR PACIENTE
-// ======================================================
-
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -268,10 +256,7 @@ router.put('/:id', (req, res, next) => {
   }
 })
 
-// ======================================================
 // EXCLUIR PACIENTE
-// ======================================================
-
 router.delete('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)

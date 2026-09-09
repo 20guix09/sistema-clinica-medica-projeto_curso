@@ -3,10 +3,7 @@ const router = express.Router()
 
 const db = require('../database')
 
-// ======================================================
-// CONSULTAS DE HOJE — SOMENTE DO USUÁRIO LOGADO
-// ======================================================
-
+// CONSULTAS DE HOJE
 router.get('/consultas-hoje', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -51,10 +48,7 @@ router.get('/consultas-hoje', (req, res, next) => {
   }
 })
 
-// ======================================================
-// CALENDÁRIO — SOMENTE DO USUÁRIO LOGADO
-// ======================================================
-
+// CALENDÁRIO
 router.get('/calendario', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -97,10 +91,7 @@ router.get('/calendario', (req, res, next) => {
   }
 })
 
-// ======================================================
 // RESUMO — SOMENTE DO USUÁRIO LOGADO
-// ======================================================
-
 router.get('/summary', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id

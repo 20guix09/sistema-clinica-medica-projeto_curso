@@ -292,7 +292,7 @@ router.put('/:id', (req, res, next) => {
 })
 
 
-// ATIVAR / DESATIVAR MÉDICO
+// ATIVAR E DESATIVAR MÉDICO
 router.patch('/:id/status', (req, res, next) => {
   try {
     const id = Number(req.params.id)

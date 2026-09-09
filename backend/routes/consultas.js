@@ -145,7 +145,7 @@ router.post('/', (req, res, next) => {
 })
 
 
-// EDITAR / REAGENDAR CONSULTA
+// EDITAR CONSULTA
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
