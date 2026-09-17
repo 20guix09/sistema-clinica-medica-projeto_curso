@@ -1026,6 +1026,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     patient: [],
     doctor: [],
     specialty: [],
+    specialties: [],
   });
   const [relationValues, setRelationValues] = useState(() => ({
     patient: item.paciente_id ?? '',
@@ -1182,7 +1183,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                   />
                 ) : type === 'specialties' ? (
                   <div className="specialties-picker">
-                    {relationOptions.specialties.map((option) => {
+                    {(relationOptions.specialties ?? []).map((option) => {
                       const checked = (relationValues.specialties ?? []).map(Number).includes(Number(option.id));
                       return (
                         <label className="specialty-check" key={option.id}>
@@ -1201,7 +1202,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                         </label>
                       );
                     })}
-                    {!relationOptions.specialties.length && <small>Cadastre uma especialidade primeiro.</small>}
+                    {!(relationOptions.specialties ?? []).length && <small>Cadastre uma especialidade primeiro.</small>}
                   </div>
                 ) : ['patient', 'doctor', 'specialty'].includes(type) ? (
                   <RelationSelect
