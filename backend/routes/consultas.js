@@ -46,8 +46,12 @@ router.post('/',(req,res,next)=>{try{
   const es=validarLista('status',status,['pendente','confirmada','finalizada','cancelada']); if(es)erros.push(es)
   if(erros.length)return res.status(400).json({erros})
   const ev=validarVinculos(u,paciente_id,medico_id,especialidade_id); if(ev)return res.status(400).json({erro:ev})
+  const medicoAtivo=db.prepare(`SELECT 1 FROM medicos WHERE id=? AND usuario_id=? AND LOWER(status)='ativo'`).get(medico_id,u)
+  const especialidadeAtiva=db.prepare(`SELECT 1 FROM especialidades WHERE id=? AND usuario_id=? AND LOWER(status)='ativo'`).get(especialidade_id,u)
+  if(!medicoAtivo)return res.status(400).json({erro:'O médico selecionado está inativo'})
+  if(!especialidadeAtiva)return res.status(400).json({erro:'A especialidade selecionada está inativa'})
   const r=db.prepare(`INSERT INTO consultas (paciente_id,medico_id,especialidade_id,data,horario,tipo,status,observacao,usuario_id)
-    VALUES (?,?,?,?,?,?,?,?,?)`).run(paciente_id,medico_id,especialidade_id,data,horario,tipo,status||'pendente',observacao||null,u)
+    VALUES (?,?,?,?,?,?,?,?,?)`).run(paciente_id,medico_id,especialidade_id,data,horario,tipo,'pendente',observacao||null,u)
   res.status(201).json(consultaCompleta(r.lastInsertRowid,u))
 }catch(e){next(e)}})
 

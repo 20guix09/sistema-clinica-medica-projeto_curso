@@ -588,6 +588,19 @@
   box-shadow: 0 12px 24px rgba(0, 119, 182, 0.2);
 }
 
+
+.mini-calendar-grid button.is-today {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  color: var(--primary-dark);
+  font-weight: 750;
+}
+
+.mini-calendar-grid button.has-events.is-today {
+  outline-color: var(--primary-dark);
+  color: var(--text-inverse);
+}
+
 .mini-calendar-grid button.is-selected {
   outline: 3px solid rgba(0, 119, 182, 0.22);
   outline-offset: 2px;

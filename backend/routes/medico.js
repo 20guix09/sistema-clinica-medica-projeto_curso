@@ -43,6 +43,9 @@ router.post('/',(req,res,next)=>{try{
   const es=validarLista('status',status,['ativo','inativo']);if(es)erros.push(es)
   if(erros.length)return res.status(400).json({erros})
   if(!validarEspecialidades(ids,u))return res.status(400).json({erro:'Uma ou mais especialidades não pertencem a esta conta'})
+  const qsAtivas=ids.map(()=>'?').join(',')
+  const totalAtivas=db.prepare(`SELECT COUNT(*) total FROM especialidades WHERE usuario_id=? AND LOWER(status)='ativo' AND id IN (${qsAtivas})`).get(u,...ids).total
+  if(totalAtivas!==ids.length)return res.status(400).json({erro:'Selecione somente especialidades ativas'})
   if(db.prepare(`SELECT 1 FROM medicos WHERE cpf=? AND usuario_id=?`).get(cpf,u))return res.status(409).json({erro:'CPF já cadastrado'})
   if(db.prepare(`SELECT 1 FROM medicos WHERE crm=? AND usuario_id=?`).get(crm,u))return res.status(409).json({erro:'CRM já cadastrado'})
   const r=db.prepare(`INSERT INTO medicos(nome,cpf,crm,estado_crm,telefone,email,status,foto,especialidade_id,usuario_id) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(nome,cpf,crm,estado_crm,telefone,email,status||'ativo',foto||null,ids[0],u)

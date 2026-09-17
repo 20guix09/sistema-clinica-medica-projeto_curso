@@ -47,10 +47,14 @@ const statusTone = {
   ativo: 'success',
   Inativo: 'muted',
   inativo: 'muted',
-  Confirmada: 'success',
+  Confirmada: 'info',
+  confirmada: 'info',
   Pendente: 'warning',
-  Finalizada: 'info',
+  pendente: 'warning',
+  Finalizada: 'success',
+  finalizada: 'success',
   Cancelada: 'danger',
+  cancelada: 'danger',
 };
 
 const fieldPlaceholders = {
@@ -307,7 +311,7 @@ const pages = {
       ['medico_id', 'Médico', 'doctor'],
       ['especialidade_id', 'Especialidade', 'specialty'],
       ['tipo', 'Tipo'],
-      ['status', 'Status', 'select', ['pendente', 'confirmada', 'finalizada', 'cancelada']],
+      ['status', 'Status', 'select', ['pendente', 'confirmada', 'finalizada']],
       ['observacao', 'Observação'],
     ],
   },
@@ -358,6 +362,7 @@ export default function DashboardPage() {
       return [];
     }
   });
+  const previousHistoryStorageKey = useRef(historyStorageKey);
   const [topbarGreeting, setTopbarGreeting] = useState('');
   const [resourceRefreshKey, setResourceRefreshKey] = useState(0);
   const [toastMessage, setToastMessage] = useState('');
@@ -407,27 +412,25 @@ export default function DashboardPage() {
   }, [toastMessage]);
 
   useEffect(() => {
+    if (previousHistoryStorageKey.current !== historyStorageKey) {
+      previousHistoryStorageKey.current = historyStorageKey;
+
+      try {
+        const salvo = window.localStorage.getItem(historyStorageKey);
+        setDeletedHistory(salvo ? JSON.parse(salvo) : []);
+      } catch {
+        setDeletedHistory([]);
+      }
+
+      return;
+    }
+
     try {
-      window.localStorage.setItem(
-        historyStorageKey,
-        JSON.stringify(deletedHistory)
-      );
+      window.localStorage.setItem(historyStorageKey, JSON.stringify(deletedHistory));
     } catch (error) {
       console.error('Erro ao salvar histórico:', error);
     }
   }, [deletedHistory, historyStorageKey]);
-
-  useEffect(() => {
-    try {
-      const salvo = window.localStorage.getItem(historyStorageKey);
-    
-      setDeletedHistory(
-        salvo ? JSON.parse(salvo) : []
-      );
-    } catch {
-      setDeletedHistory([]);
-    }
-  }, [historyStorageKey]);
 
   function handleRecordDeleted(entry) {
     setDeletedHistory((current) => [
@@ -779,10 +782,15 @@ function MiniCalendar({ calendario }) {
         ))}
         {monthDays.map((day) => {
           const appointments = scheduledDays.get(day)?.total;
+          const hoje = new Date();
+          const isToday =
+            hoje.getFullYear() === visibleMonth.getFullYear() &&
+            hoje.getMonth() === visibleMonth.getMonth() &&
+            hoje.getDate() === day;
 
           return (
             <button
-              className={`${appointments ? 'has-events' : ''} ${selectedDay === day ? 'is-selected' : ''}`}
+              className={`${appointments ? 'has-events' : ''} ${selectedDay === day ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`}
               key={day}
               type="button"
               onClick={() => setSelectedDay((current) => (current === day ? null : day))}
@@ -1075,7 +1083,20 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
         const next = { patient: [], doctor: [], specialty: [], specialties: [] };
 
         relationTypes.forEach((type, index) => {
-          next[type] = Array.isArray(results[index]) ? results[index] : [];
+          const options = Array.isArray(results[index]) ? results[index] : [];
+
+          next[type] = options.filter((option) => {
+            const ativo = !option?.status || String(option.status).toLowerCase() === 'ativo';
+            if (ativo) return true;
+            if (mode !== 'edit') return false;
+
+            if (type === 'doctor') return Number(option.id) === Number(item.medico_id);
+            if (type === 'specialty') return Number(option.id) === Number(item.especialidade_id);
+            if (type === 'specialties') {
+              return (item.especialidade_ids ?? []).map(Number).includes(Number(option.id));
+            }
+            return false;
+          });
         });
 
         setRelationOptions(next);
@@ -1111,6 +1132,8 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
       values.paciente_id = relationValues.patient;
       values.medico_id = relationValues.doctor;
       values.especialidade_id = relationValues.specialty;
+
+      if (mode === 'create') values.status = 'pendente';
     }
 
     Object.entries(values).forEach(([key, value]) => {
@@ -1178,7 +1201,10 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
           </div>
         ) : (
           <form className="modal-form" onSubmit={handleSubmit}>
-            {config.fields.map(([key, label, type = 'text', options]) => (
+            {config.fields.map(([key, label, type = 'text', options]) => {
+              if (config.resource === 'consultas' && mode === 'create' && key === 'status') return null;
+
+              return (
               <label key={key}>
                 <span>{label}</span>
 
@@ -1308,7 +1334,8 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                   </div>
                 )}
               </label>
-            ))}
+              );
+            })}
 
             <div className="modal-actions">
               <button className="modal-cancel-action" type="button" onClick={onClose}>
