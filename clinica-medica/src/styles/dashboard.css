@@ -1350,3 +1350,95 @@
     bottom: 16px;
   }
 }
+
+/* Seletor de múltiplas especialidades do médico */
+.specialties-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.specialties-trigger {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #64748b;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.specialties-dropdown.is-open .specialties-trigger {
+  border-color: #2563eb;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.specialties-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  border: 1px solid #2563eb;
+  border-top: 1px solid #cbd5e1;
+  border-radius: 0 0 12px 12px;
+  background: #fff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+}
+
+.specialty-option {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.specialty-option:last-child { border-bottom: 0; }
+.specialty-option:hover { background: #f8fafc; }
+.specialty-option.is-selected { background: #f8fbff; }
+
+.specialty-radio {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #64748b;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.specialty-option.is-selected .specialty-radio {
+  border-color: #2563eb;
+}
+
+.specialty-option.is-selected .specialty-radio span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.specialties-empty {
+  padding: 14px;
+  color: #64748b;
+  font-size: 0.9rem;
+}

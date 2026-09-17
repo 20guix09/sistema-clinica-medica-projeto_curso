@@ -1035,6 +1035,19 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     specialties: item.especialidade_ids ?? (item.especialidade_id ? [item.especialidade_id] : []),
   }));
   const [isLoadingRelations, setIsLoadingRelations] = useState(false);
+  const [specialtiesOpen, setSpecialtiesOpen] = useState(false);
+  const specialtiesPickerRef = useRef(null);
+
+  useEffect(() => {
+    function handleOutsideClick(event) {
+      if (specialtiesPickerRef.current && !specialtiesPickerRef.current.contains(event.target)) {
+        setSpecialtiesOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1182,27 +1195,50 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                     }
                   />
                 ) : type === 'specialties' ? (
-                  <div className="specialties-picker">
-                    {(relationOptions.specialties ?? []).map((option) => {
-                      const checked = (relationValues.specialties ?? []).map(Number).includes(Number(option.id));
-                      return (
-                        <label className="specialty-check" key={option.id}>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={isLoadingRelations}
-                            onChange={(event) => setRelationValues((current) => ({
-                              ...current,
-                              specialties: event.target.checked
-                                ? [...(current.specialties ?? []), option.id]
-                                : (current.specialties ?? []).filter((id) => Number(id) !== Number(option.id)),
-                            }))}
-                          />
-                          <span>{option.nome}</span>
-                        </label>
-                      );
-                    })}
-                    {!(relationOptions.specialties ?? []).length && <small>Cadastre uma especialidade primeiro.</small>}
+                  <div className={`specialties-dropdown ${specialtiesOpen ? 'is-open' : ''}`} ref={specialtiesPickerRef}>
+                    <button
+                      type="button"
+                      className="specialties-trigger"
+                      disabled={isLoadingRelations}
+                      onClick={() => setSpecialtiesOpen((open) => !open)}
+                      aria-expanded={specialtiesOpen}
+                    >
+                      <span>
+                        {(relationValues.specialties ?? []).length
+                          ? `${(relationValues.specialties ?? []).length} especialidade${(relationValues.specialties ?? []).length > 1 ? 's' : ''} selecionada${(relationValues.specialties ?? []).length > 1 ? 's' : ''}`
+                          : 'Selecionar especialidade'}
+                      </span>
+                      {specialtiesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+
+                    {specialtiesOpen && (
+                      <div className="specialties-menu">
+                        {(relationOptions.specialties ?? []).map((option) => {
+                          const checked = (relationValues.specialties ?? []).map(Number).includes(Number(option.id));
+                          return (
+                            <button
+                              type="button"
+                              className={`specialty-option ${checked ? 'is-selected' : ''}`}
+                              key={option.id}
+                              onClick={() => setRelationValues((current) => ({
+                                ...current,
+                                specialties: checked
+                                  ? (current.specialties ?? []).filter((id) => Number(id) !== Number(option.id))
+                                  : [...(current.specialties ?? []), option.id],
+                              }))}
+                            >
+                              <span>{option.nome}</span>
+                              <span className="specialty-radio" aria-hidden="true">
+                                {checked && <span />}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {!(relationOptions.specialties ?? []).length && (
+                          <div className="specialties-empty">Cadastre uma especialidade primeiro.</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : ['patient', 'doctor', 'specialty'].includes(type) ? (
                   <RelationSelect
