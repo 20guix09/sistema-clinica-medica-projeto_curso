@@ -263,12 +263,12 @@ const pages = {
     subtitle: 'Profissionais, especialidades e disponibilidade da clínica',
     action: 'Novo médico',
     search: 'Pesquisar por nome, CPF, CRM, e-mail ou especialidade',
-    searchKeys: ['nome', 'cpf', 'crm', 'estado_crm', 'telefone', 'email', 'especialidade', 'status'],
+    searchKeys: ['nome', 'cpf', 'crm', 'estado_crm', 'telefone', 'email', 'especialidade', 'especialidades_nomes', 'status'],
     service: medicosService,
     columns: [
       ['nome', 'Profissional'],
       ['crm', 'CRM'],
-      ['especialidade', 'Especialidade'],
+      ['especialidades_nomes', 'Especialidades'],
       ['telefone', 'Telefone'],
       ['status', 'Status'],
     ],
@@ -277,7 +277,7 @@ const pages = {
       ['cpf', 'CPF'],
       ['crm', 'CRM'],
       ['estado_crm', 'Estado do CRM'],
-      ['especialidade_id', 'Especialidade', 'specialty'],
+      ['especialidade_ids', 'Especialidades', 'specialties'],
       ['telefone', 'Telefone'],
       ['email', 'E-mail'],
       ['status', 'Status', 'select', ['ativo', 'inativo']],
@@ -1009,7 +1009,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
   const [formValues, setFormValues] = useState(() =>
     Object.fromEntries(
       config.fields
-        .filter(([, , type]) => !['select', 'patient', 'doctor', 'specialty'].includes(type))
+        .filter(([, , type]) => !['select', 'patient', 'doctor', 'specialty', 'specialties'].includes(type))
         .map(([key]) => [key, getResourceFieldValue(config.resource, key, item)]),
     ),
   );
@@ -1031,6 +1031,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     patient: item.paciente_id ?? '',
     doctor: item.medico_id ?? '',
     specialty: item.especialidade_id ?? '',
+    specialties: item.especialidade_ids ?? (item.especialidade_id ? [item.especialidade_id] : []),
   }));
   const [isLoadingRelations, setIsLoadingRelations] = useState(false);
 
@@ -1040,7 +1041,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     async function loadRelations() {
       const relationTypes = config.fields
         .map(([, , type]) => type)
-        .filter((type) => ['patient', 'doctor', 'specialty'].includes(type));
+        .filter((type) => ['patient', 'doctor', 'specialty', 'specialties'].includes(type));
 
       if (!relationTypes.length) return;
 
@@ -1057,7 +1058,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
 
         if (!isMounted) return;
 
-        const next = { patient: [], doctor: [], specialty: [] };
+        const next = { patient: [], doctor: [], specialty: [], specialties: [] };
 
         relationTypes.forEach((type, index) => {
           next[type] = Array.isArray(results[index]) ? results[index] : [];
@@ -1084,7 +1085,12 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
 
     if (config.resource === 'medicos') {
-      values.especialidade_id = relationValues.specialty;
+      values.especialidade_ids = relationValues.specialties;
+      values.especialidade_id = relationValues.specialties?.[0] ?? '';
+    }
+    if (config.resource === 'medicos' && !relationValues.specialties?.length) {
+      window.alert('Selecione pelo menos uma especialidade para o médico.');
+      return;
     }
 
     if (config.resource === 'consultas') {
@@ -1133,6 +1139,7 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
               if (type === 'patient') value = item.paciente ?? item.paciente_id;
               if (type === 'doctor') value = item.medico ?? item.medico_id;
               if (type === 'specialty') value = item.especialidade ?? item.especialidade_id;
+              if (type === 'specialties') value = item.especialidades_nomes ?? item.especialidade ?? '-';
 
               return (
                 <div
@@ -1173,6 +1180,29 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                       }))
                     }
                   />
+                ) : type === 'specialties' ? (
+                  <div className="specialties-picker">
+                    {relationOptions.specialties.map((option) => {
+                      const checked = (relationValues.specialties ?? []).map(Number).includes(Number(option.id));
+                      return (
+                        <label className="specialty-check" key={option.id}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={isLoadingRelations}
+                            onChange={(event) => setRelationValues((current) => ({
+                              ...current,
+                              specialties: event.target.checked
+                                ? [...(current.specialties ?? []), option.id]
+                                : (current.specialties ?? []).filter((id) => Number(id) !== Number(option.id)),
+                            }))}
+                          />
+                          <span>{option.nome}</span>
+                        </label>
+                      );
+                    })}
+                    {!relationOptions.specialties.length && <small>Cadastre uma especialidade primeiro.</small>}
+                  </div>
                 ) : ['patient', 'doctor', 'specialty'].includes(type) ? (
                   <RelationSelect
                     name={key}
@@ -1207,13 +1237,35 @@ function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                         name={key}
                         type={type}
                         value={formValues[key] ?? ''}
+                        max={config.resource === 'pacientes' && key === 'data_nascimento' ? new Date().toLocaleDateString('en-CA') : undefined}
+                        required={config.resource === 'pacientes' && ['numero', 'complemento'].includes(key)}
                         placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
-                        onChange={(event) =>
-                          setFormValues((current) => ({
-                            ...current,
-                            [key]: event.target.value,
-                          }))
-                        }
+                        onChange={async (event) => {
+                          const value = event.target.value;
+                          setFormValues((current) => ({ ...current, [key]: value }));
+
+                          if (config.resource === 'pacientes' && key === 'cep') {
+                            const cepLimpo = value.replace(/\D/g, '');
+                            if (cepLimpo.length === 8) {
+                              try {
+                                const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+                                const endereco = await response.json();
+                                if (!endereco.erro) {
+                                  setFormValues((current) => ({
+                                    ...current,
+                                    cep: value,
+                                    rua: endereco.logradouro ?? '',
+                                    bairro: endereco.bairro ?? '',
+                                    cidade: endereco.localidade ?? '',
+                                    estado: endereco.uf ?? '',
+                                  }));
+                                }
+                              } catch (error) {
+                                console.error('Erro ao consultar CEP:', error);
+                              }
+                            }
+                          }
+                        }}
                       />
                     )}
                   </div>

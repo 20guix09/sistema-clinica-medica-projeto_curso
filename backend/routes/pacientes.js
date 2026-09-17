@@ -76,11 +76,16 @@ router.post('/', (req, res, next) => {
 
     const erros = validarObrigatorios(
       req.body,
-      ['nome', 'cpf', 'nasc', 'tel', 'email']
+      ['nome', 'cpf', 'nasc', 'tel', 'email', 'num', 'comp']
     )
 
     if (email && !emailValido(email)) {
       erros.push('Email com formato inválido')
+    }
+
+    const hoje = new Date().toISOString().slice(0, 10)
+    if (nasc && nasc > hoje) {
+      erros.push('A data de nascimento não pode ser futura')
     }
 
     if (erros.length > 0) {
@@ -189,6 +194,17 @@ router.put('/:id', (req, res, next) => {
       return res.status(400).json({
         erro: 'Email com formato inválido'
       })
+    }
+
+    const numeroFinal = num ?? existente.numero
+    const complementoFinal = comp ?? existente.complemento
+    if (!String(numeroFinal ?? '').trim() || !String(complementoFinal ?? '').trim()) {
+      return res.status(400).json({ erro: 'Número e complemento são obrigatórios' })
+    }
+
+    if (nasc) {
+      const hoje = new Date().toISOString().slice(0, 10)
+      if (nasc > hoje) return res.status(400).json({ erro: 'A data de nascimento não pode ser futura' })
     }
 
     if (cpf) {

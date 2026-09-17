@@ -1,382 +1,68 @@
-const express = require('express')
-const router = express.Router()
+const express=require('express')
+const router=express.Router()
+const db=require('../database')
+const {validarObrigatorios,validarLista,emailValido}=require('../helpers/validacao')
 
-const db = require('../database')
-
-const {
-  validarObrigatorios,
-  validarLista,
-  emailValido
-} = require('../helpers/validacao')
-
-// LISTAR MÉDICOS
-router.get('/', (req, res, next) => {
-  try {
-    const medicos = db.prepare(`
-      SELECT
-        medicos.id,
-        medicos.nome,
-        medicos.cpf,
-        medicos.crm,
-        medicos.estado_crm,
-        medicos.telefone,
-        medicos.email,
-        medicos.status,
-        medicos.foto,
-        especialidades.nome AS especialidade
-      FROM medicos
-      JOIN especialidades
-        ON medicos.especialidade_id = especialidades.id
-      ORDER BY medicos.nome
-    `).all()
-
-    res.json(medicos)
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-// BUSCAR MÉDICO POR ID
-router.get('/:id', (req, res, next) => {
-  try {
-    const id = Number(req.params.id)
-
-    const medico = db.prepare(`
-      SELECT
-        medicos.id,
-        medicos.nome,
-        medicos.cpf,
-        medicos.crm,
-        medicos.estado_crm,
-        medicos.telefone,
-        medicos.email,
-        medicos.status,
-        medicos.foto,
-        medicos.especialidade_id,
-        especialidades.nome AS especialidade
-      FROM medicos
-      JOIN especialidades
-        ON medicos.especialidade_id = especialidades.id
-      WHERE medicos.id = ?
-    `).get(id)
-
-    if (!medico) {
-      return res.status(404).json({
-        erro: 'Médico não encontrado'
-      })
-    }
-
-    const disponibilidades = db.prepare(`
-      SELECT
-        id,
-        dia_semana,
-        horario_inicio,
-        horario_fim
-      FROM disponibilidades_medicos
-      WHERE medico_id = ?
-    `).all(id)
-
-    res.json({
-      ...medico,
-      disponibilidades
-    })
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-// CADASTRAR MÉDICO
-router.post('/', (req, res, next) => {
-  try {
-    const {
-      nome,
-      cpf,
-      crm,
-      estado_crm,
-      telefone,
-      email,
-      status,
-      foto,
-      especialidade_id,
-      disponibilidades
-    } = req.body
-
-      const erros = validarObrigatorios(
-        req.body,
-        [
-          'nome',
-          'cpf',
-          'crm',
-          'estado_crm',
-          'telefone',
-          'email',
-          'especialidade_id'
-        ]
-      )
-      
-      if (email && !emailValido(email)) {
-        erros.push('Email com formato inválido')
-      }
-      
-      const erroStatus = validarLista(
-        'status',
-        status,
-        ['ativo', 'inativo']
-      )
-      
-      if (erroStatus) {
-        erros.push(erroStatus)
-      }
-      
-      if (erros.length > 0) {
-        return res.status(400).json({ erros })
-      }
-    
-    const especialidade = db.prepare(`
-      SELECT id
-      FROM especialidades
-      WHERE id = ?
-    `).get(especialidade_id)
-
-    if (!especialidade) {
-      return res.status(400).json({
-        erro: 'Especialidade informada não existe'
-      })
-    }
-
-    const resultado = db.prepare(`
-      INSERT INTO medicos (
-        nome,
-        cpf,
-        crm,
-        estado_crm,
-        telefone,
-        email,
-        status,
-        foto,
-        especialidade_id
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      nome,
-      cpf,
-      crm,
-      estado_crm,
-      telefone,
-      email,
-      status ?? 'ativo',
-      foto ?? null,
-      especialidade_id
-    )
-
-    const medicoId = resultado.lastInsertRowid
-
-    if (Array.isArray(disponibilidades)) {
-      const inserirDisponibilidade = db.prepare(`
-        INSERT INTO disponibilidades_medicos (
-          medico_id,
-          dia_semana,
-          horario_inicio,
-          horario_fim
-        )
-        VALUES (?, ?, ?, ?)
-      `)
-
-      for (const disponibilidade of disponibilidades) {
-        inserirDisponibilidade.run(
-          medicoId,
-          disponibilidade.dia_semana,
-          disponibilidade.horario_inicio,
-          disponibilidade.horario_fim
-        )
-      }
-    }
-
-    const novoMedico = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(medicoId)
-
-    res.status(201).json(novoMedico)
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-// EDITAR MÉDICO
-router.put('/:id', (req, res, next) => {
-  try {
-    const id = Number(req.params.id)
-
-    const existente = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(id)
-
-    if (!existente) {
-      return res.status(404).json({
-        erro: 'Médico não encontrado'
-      })
-    }
-
-    const {
-      nome,
-      cpf,
-      crm,
-      estado_crm,
-      telefone,
-      email,
-      status,
-      foto,
-      especialidade_id
-    } = req.body
-
-    if (especialidade_id !== undefined) {
-      const especialidade = db.prepare(`
-        SELECT id
-        FROM especialidades
-        WHERE id = ?
-      `).get(especialidade_id)
-
-      if (!especialidade) {
-        return res.status(400).json({
-          erro: 'Especialidade informada não existe'
-        })
-      }
-    }
-
-    db.prepare(`
-      UPDATE medicos SET
-        nome = ?,
-        cpf = ?,
-        crm = ?,
-        estado_crm = ?,
-        telefone = ?,
-        email = ?,
-        status = ?,
-        foto = ?,
-        especialidade_id = ?
-      WHERE id = ?
-    `).run(
-      nome ?? existente.nome,
-      cpf ?? existente.cpf,
-      crm ?? existente.crm,
-      estado_crm ?? existente.estado_crm,
-      telefone ?? existente.telefone,
-      email ?? existente.email,
-      status ?? existente.status,
-      foto ?? existente.foto,
-      especialidade_id ?? existente.especialidade_id,
-      id
-    )
-
-    const atualizado = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(id)
-
-    res.json(atualizado)
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-// ATIVAR E DESATIVAR MÉDICO
-router.patch('/:id/status', (req, res, next) => {
-  try {
-    const id = Number(req.params.id)
-    const { status } = req.body
-
-    const existente = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(id)
-
-    if (!existente) {
-      return res.status(404).json({
-        erro: 'Médico não encontrado'
-      })
-    }
-
-    if (status !== 'ativo' && status !== 'inativo') {
-      return res.status(400).json({
-        erro: 'Status deve ser ativo ou inativo'
-      })
-    }
-
-    db.prepare(`
-      UPDATE medicos
-      SET status = ?
-      WHERE id = ?
-    `).run(status, id)
-
-    const atualizado = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(id)
-
-    res.json(atualizado)
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-// EXCLUIR MÉDICO
-router.delete('/:id', (req, res, next) => {
-  try {
-    const id = Number(req.params.id)
-
-    const existente = db.prepare(`
-      SELECT *
-      FROM medicos
-      WHERE id = ?
-    `).get(id)
-
-    if (!existente) {
-      return res.status(404).json({
-        erro: 'Médico não encontrado'
-      })
-    }
-
-    const consultaVinculada = db.prepare(`
-      SELECT id
-      FROM consultas
-      WHERE medico_id = ?
-      LIMIT 1
-    `).get(id)
-
-    if (consultaVinculada) {
-      return res.status(409).json({
-        erro: 'Não é possível excluir o médico porque existem consultas vinculadas. Desative o médico.'
-      })
-    }
-
-    db.prepare(`
-      DELETE FROM medicos
-      WHERE id = ?
-    `).run(id)
-
-    res.status(204).send()
-
-  } catch (err) {
-    next(err)
-  }
-})
-
-
-module.exports = router
+function idsEspecialidades(body){
+  const ids=Array.isArray(body.especialidade_ids)?body.especialidade_ids:[]
+  if(body.especialidade_id!==undefined && body.especialidade_id!==null && body.especialidade_id!=='') ids.unshift(body.especialidade_id)
+  return [...new Set(ids.map(Number).filter(Number.isInteger))]
+}
+function validarEspecialidades(ids,u){
+  if(!ids.length)return false
+  const qs=ids.map(()=>'?').join(',')
+  return db.prepare(`SELECT COUNT(*) total FROM especialidades WHERE usuario_id=? AND id IN (${qs})`).get(u,...ids).total===ids.length
+}
+function sincronizarEspecialidades(medicoId,ids,u){
+  db.prepare(`DELETE FROM medico_especialidades WHERE medico_id=? AND usuario_id=?`).run(medicoId,u)
+  const ins=db.prepare(`INSERT OR IGNORE INTO medico_especialidades(medico_id,especialidade_id,usuario_id) VALUES(?,?,?)`)
+  ids.forEach(id=>ins.run(medicoId,id,u))
+}
+function carregar(id,u){
+  const m=db.prepare(`SELECT m.*, e.nome especialidade FROM medicos m JOIN especialidades e ON e.id=m.especialidade_id AND e.usuario_id=m.usuario_id WHERE m.id=? AND m.usuario_id=?`).get(id,u)
+  if(!m)return null
+  const es=db.prepare(`SELECT e.id,e.nome FROM medico_especialidades me JOIN especialidades e ON e.id=me.especialidade_id AND e.usuario_id=me.usuario_id WHERE me.medico_id=? AND me.usuario_id=? ORDER BY e.nome`).all(id,u)
+  return {...m,especialidades:es,especialidade_ids:es.map(x=>x.id),especialidades_nomes:es.map(x=>x.nome).join(', ')}
+}
+router.get('/',(req,res,next)=>{try{
+  const u=req.usuario.id
+  const base=db.prepare(`SELECT m.*, e.nome especialidade FROM medicos m JOIN especialidades e ON e.id=m.especialidade_id AND e.usuario_id=m.usuario_id WHERE m.usuario_id=? ORDER BY m.nome`).all(u)
+  res.json(base.map(m=>carregar(m.id,u)))
+}catch(e){next(e)}})
+router.get('/:id',(req,res,next)=>{try{
+  const u=req.usuario.id,id=Number(req.params.id),m=carregar(id,u)
+  if(!m)return res.status(404).json({erro:'Médico não encontrado'})
+  const disponibilidades=db.prepare(`SELECT id,dia_semana,horario_inicio,horario_fim FROM disponibilidades_medicos WHERE medico_id=?`).all(id)
+  res.json({...m,disponibilidades})
+}catch(e){next(e)}})
+router.post('/',(req,res,next)=>{try{
+  const u=req.usuario.id,{nome,cpf,crm,estado_crm,telefone,email,status,foto,disponibilidades}=req.body
+  const ids=idsEspecialidades(req.body)
+  const erros=validarObrigatorios({...req.body,especialidade_id:ids[0]},['nome','cpf','crm','estado_crm','telefone','email','especialidade_id'])
+  if(email&&!emailValido(email))erros.push('Email com formato inválido')
+  const es=validarLista('status',status,['ativo','inativo']);if(es)erros.push(es)
+  if(erros.length)return res.status(400).json({erros})
+  if(!validarEspecialidades(ids,u))return res.status(400).json({erro:'Uma ou mais especialidades não pertencem a esta conta'})
+  if(db.prepare(`SELECT 1 FROM medicos WHERE cpf=? AND usuario_id=?`).get(cpf,u))return res.status(409).json({erro:'CPF já cadastrado'})
+  if(db.prepare(`SELECT 1 FROM medicos WHERE crm=? AND usuario_id=?`).get(crm,u))return res.status(409).json({erro:'CRM já cadastrado'})
+  const r=db.prepare(`INSERT INTO medicos(nome,cpf,crm,estado_crm,telefone,email,status,foto,especialidade_id,usuario_id) VALUES(?,?,?,?,?,?,?,?,?,?)`).run(nome,cpf,crm,estado_crm,telefone,email,status||'ativo',foto||null,ids[0],u)
+  sincronizarEspecialidades(r.lastInsertRowid,ids,u)
+  if(Array.isArray(disponibilidades)){const ins=db.prepare(`INSERT INTO disponibilidades_medicos(medico_id,dia_semana,horario_inicio,horario_fim) VALUES(?,?,?,?)`); disponibilidades.forEach(d=>ins.run(r.lastInsertRowid,d.dia_semana,d.horario_inicio,d.horario_fim))}
+  res.status(201).json(carregar(r.lastInsertRowid,u))
+}catch(e){next(e)}})
+router.put('/:id',(req,res,next)=>{try{
+  const u=req.usuario.id,id=Number(req.params.id),ex=carregar(id,u)
+  if(!ex)return res.status(404).json({erro:'Médico não encontrado'})
+  const ids=idsEspecialidades(req.body); const finalIds=ids.length?ids:ex.especialidade_ids
+  if(!validarEspecialidades(finalIds,u))return res.status(400).json({erro:'Uma ou mais especialidades não pertencem a esta conta'})
+  const v={...ex,...req.body}
+  if(v.email&&!emailValido(v.email))return res.status(400).json({erro:'Email com formato inválido'})
+  if(db.prepare(`SELECT 1 FROM medicos WHERE cpf=? AND usuario_id=? AND id!=?`).get(v.cpf,u,id))return res.status(409).json({erro:'CPF já cadastrado'})
+  if(db.prepare(`SELECT 1 FROM medicos WHERE crm=? AND usuario_id=? AND id!=?`).get(v.crm,u,id))return res.status(409).json({erro:'CRM já cadastrado'})
+  db.prepare(`UPDATE medicos SET nome=?,cpf=?,crm=?,estado_crm=?,telefone=?,email=?,status=?,foto=?,especialidade_id=? WHERE id=? AND usuario_id=?`).run(v.nome,v.cpf,v.crm,v.estado_crm,v.telefone,v.email,v.status,v.foto,finalIds[0],id,u)
+  sincronizarEspecialidades(id,finalIds,u)
+  res.json(carregar(id,u))
+}catch(e){next(e)}})
+router.patch('/:id/status',(req,res,next)=>{try{const u=req.usuario.id,id=Number(req.params.id),{status}=req.body;if(!['ativo','inativo'].includes(status))return res.status(400).json({erro:'Status deve ser ativo ou inativo'});const r=db.prepare(`UPDATE medicos SET status=? WHERE id=? AND usuario_id=?`).run(status,id,u);if(!r.changes)return res.status(404).json({erro:'Médico não encontrado'});res.json(carregar(id,u))}catch(e){next(e)}})
+router.delete('/:id',(req,res,next)=>{try{const u=req.usuario.id,id=Number(req.params.id),ex=carregar(id,u);if(!ex)return res.status(404).json({erro:'Médico não encontrado'});if(db.prepare(`SELECT 1 FROM consultas WHERE medico_id=? AND usuario_id=? LIMIT 1`).get(id,u))return res.status(409).json({erro:'Não é possível excluir o médico porque existem consultas vinculadas. Desative o médico.'});db.prepare(`DELETE FROM medicos WHERE id=? AND usuario_id=?`).run(id,u);res.status(200).json(ex)}catch(e){next(e)}})
+module.exports=router
