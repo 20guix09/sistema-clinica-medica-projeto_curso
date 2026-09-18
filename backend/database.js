@@ -3,10 +3,10 @@
 const Database = require('better-sqlite3')
 const path = require('path')
 
-// Usa sempre o MESMO banco, independentemente da pasta de onde o npm/node foi executado.
 // No Railway usa o Volume persistente; localmente usa o banco da pasta backend.
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, 'banco.db')
 const db = new Database(dbPath)
+
 db.pragma('foreign_keys = ON')
 
 db.exec(`CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT,nome TEXT NOT NULL,email TEXT UNIQUE NOT NULL,senha_hash TEXT NOT NULL)`)
