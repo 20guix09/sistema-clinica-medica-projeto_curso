@@ -13,6 +13,22 @@ const pacienteAliases = {
   telefone: ['telefone', 'tel'], data_nascimento: ['data_nascimento', 'nasc', 'dataNascimento'],
   numero: ['numero', 'num'], complemento: ['complemento', 'comp'], cidade: ['cidade', 'cid'], estado: ['estado', 'est'],
 };
+
+// obtém data e horário locais para impedir agendamentos no passado
+function getLocalNow() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hour = String(now.getHours()).padStart(2, '0');
+  const minute = String(now.getMinutes()).padStart(2, '0');
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hour}:${minute}`,
+  };
+}
+
 const fieldPlaceholders = {
   nome:'Ex.: Mariana Oliveira', cpf:'Ex.: 123.456.789-01', telefone:'Ex.: (11) 99999-1234', email:'Ex.: exemplo@e-mail.com',
   data_nascimento:'Ex.: 29/08/1990', sexo:'Ex.: Masculino', cep:'Ex.: 86000-000', rua:'Ex.: Rua das Flores', numero:'Ex.: 120',
@@ -346,7 +362,18 @@ export function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
       values.medico_id = relationValues.doctor;
       values.especialidade_id = relationValues.specialty;
 
-      if (mode === 'create') values.status = 'pendente';
+      if (mode === 'create') {
+        const agora = getLocalNow();
+        const dataSelecionada = String(values.data ?? '');
+        const horarioSelecionado = String(values.horario ?? '').slice(0, 5);
+
+        if (dataSelecionada < agora.date || (dataSelecionada === agora.date && horarioSelecionado < agora.time)) {
+          window.alert('Não é possível cadastrar uma consulta em uma data ou horário que já passou.');
+          return;
+        }
+
+        values.status = 'pendente';
+      }
     }
 
     Object.entries(values).forEach(([key, value]) => {
@@ -514,7 +541,14 @@ export function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
                         name={key}
                         type={type}
                         value={formValues[key] ?? ''}
-                        max={config.resource === 'pacientes' && key === 'data_nascimento' ? new Date().toLocaleDateString('en-CA') : undefined}
+                        min={
+                          config.resource === 'consultas' && mode === 'create' && key === 'data'
+                            ? getLocalNow().date
+                            : config.resource === 'consultas' && mode === 'create' && key === 'horario' && formValues.data === getLocalNow().date
+                              ? getLocalNow().time
+                              : undefined
+                        }
+                        max={config.resource === 'pacientes' && key === 'data_nascimento' ? getLocalNow().date : undefined}
                         required={config.resource === 'pacientes' && ['numero', 'complemento'].includes(key)}
                         placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
                         onChange={async (event) => {

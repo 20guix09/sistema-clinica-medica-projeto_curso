@@ -27,6 +27,26 @@ function validarVinculos(usuarioId, pacienteId, medicoId, especialidadeId) {
   return null
 }
 
+
+// valida se a nova consulta não está no passado
+function validarDataHorarioFuturo(data, horario) {
+  const fuso = process.env.APP_TIME_ZONE || 'America/Sao_Paulo'
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fuso,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).formatToParts(new Date())
+  const valor = Object.fromEntries(partes.map(({type,value}) => [type,value]))
+  const hoje = `${valor.year}-${valor.month}-${valor.day}`
+  const agora = `${valor.hour}:${valor.minute}`
+  const hora = String(horario || '').slice(0,5)
+
+  if (String(data) < hoje || (String(data) === hoje && hora < agora)) {
+    return 'Não é possível cadastrar uma consulta em uma data ou horário que já passou'
+  }
+  return null
+}
+
 // visualizar lista de consultas
 router.get('/', (req,res,next)=>{ try {
   const u=req.usuario.id
@@ -51,6 +71,7 @@ router.post('/',(req,res,next)=>{try{
   const erros=validarObrigatorios(req.body,['paciente_id','medico_id','especialidade_id','data','horario','tipo'])
   const es=validarLista('status',status,['pendente','confirmada','finalizada','cancelada']); if(es)erros.push(es)
   if(erros.length)return res.status(400).json({erros})
+  const erroDataHorario=validarDataHorarioFuturo(data,horario); if(erroDataHorario)return res.status(400).json({erro:erroDataHorario})
   const ev=validarVinculos(u,paciente_id,medico_id,especialidade_id); if(ev)return res.status(400).json({erro:ev})
   const medicoAtivo=db.prepare(`SELECT 1 FROM medicos WHERE id=? AND usuario_id=? AND LOWER(status)='ativo'`).get(medico_id,u)
   const especialidadeAtiva=db.prepare(`SELECT 1 FROM especialidades WHERE id=? AND usuario_id=? AND LOWER(status)='ativo'`).get(especialidade_id,u)
