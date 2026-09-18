@@ -3,6 +3,9 @@
 import { ChevronDown, ChevronUp, Edit3, Eye, Plus, Search, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBadge } from '../dashboard/DashboardWidgets.jsx';
+import { pacientesService } from '../../services/pacientesService.js';
+import { medicosService } from '../../services/medicosService.js';
+import { especialidadesService } from '../../services/especialidadesService.js';
 
 // CRUD genérico usado pelas telas de pacientes, médicos, consultas e especialidades.
 const resourceNames = { consultas: 'Consulta', especialidades: 'Especialidade', medicos: 'Médico', pacientes: 'Paciente' };
