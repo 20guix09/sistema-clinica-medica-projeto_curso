@@ -1,40 +1,48 @@
+// Rotas de cadastro e gestão de médicos.
 const express=require('express')
 const router=express.Router()
 const db=require('../database')
 const {validarObrigatorios,validarLista,emailValido}=require('../helpers/validacao')
 
+// função para ids especialidades
 function idsEspecialidades(body){
   const ids=Array.isArray(body.especialidade_ids)?body.especialidade_ids:[]
   if(body.especialidade_id!==undefined && body.especialidade_id!==null && body.especialidade_id!=='') ids.unshift(body.especialidade_id)
   return [...new Set(ids.map(Number).filter(Number.isInteger))]
 }
+// valida especialidades
 function validarEspecialidades(ids,u){
   if(!ids.length)return false
   const qs=ids.map(()=>'?').join(',')
   return db.prepare(`SELECT COUNT(*) total FROM especialidades WHERE usuario_id=? AND id IN (${qs})`).get(u,...ids).total===ids.length
 }
+// função para sincronizar especialidades
 function sincronizarEspecialidades(medicoId,ids,u){
   db.prepare(`DELETE FROM medico_especialidades WHERE medico_id=? AND usuario_id=?`).run(medicoId,u)
   const ins=db.prepare(`INSERT OR IGNORE INTO medico_especialidades(medico_id,especialidade_id,usuario_id) VALUES(?,?,?)`)
   ids.forEach(id=>ins.run(medicoId,id,u))
 }
+// função para carregar
 function carregar(id,u){
   const m=db.prepare(`SELECT m.*, e.nome especialidade FROM medicos m JOIN especialidades e ON e.id=m.especialidade_id AND e.usuario_id=m.usuario_id WHERE m.id=? AND m.usuario_id=?`).get(id,u)
   if(!m)return null
   const es=db.prepare(`SELECT e.id,e.nome FROM medico_especialidades me JOIN especialidades e ON e.id=me.especialidade_id AND e.usuario_id=me.usuario_id WHERE me.medico_id=? AND me.usuario_id=? ORDER BY e.nome`).all(id,u)
   return {...m,especialidades:es,especialidade_ids:es.map(x=>x.id),especialidades_nomes:es.map(x=>x.nome).join(', ')}
 }
+// visualizar lista de medico
 router.get('/',(req,res,next)=>{try{
   const u=req.usuario.id
   const base=db.prepare(`SELECT m.*, e.nome especialidade FROM medicos m JOIN especialidades e ON e.id=m.especialidade_id AND e.usuario_id=m.usuario_id WHERE m.usuario_id=? ORDER BY m.nome`).all(u)
   res.json(base.map(m=>carregar(m.id,u)))
 }catch(e){next(e)}})
+// visualizar medico por id
 router.get('/:id',(req,res,next)=>{try{
   const u=req.usuario.id,id=Number(req.params.id),m=carregar(id,u)
   if(!m)return res.status(404).json({erro:'Médico não encontrado'})
   const disponibilidades=db.prepare(`SELECT id,dia_semana,horario_inicio,horario_fim FROM disponibilidades_medicos WHERE medico_id=?`).all(id)
   res.json({...m,disponibilidades})
 }catch(e){next(e)}})
+// cadastrar medico
 router.post('/',(req,res,next)=>{try{
   const u=req.usuario.id,{nome,cpf,crm,estado_crm,telefone,email,status,foto,disponibilidades}=req.body
   const ids=idsEspecialidades(req.body)
@@ -53,6 +61,7 @@ router.post('/',(req,res,next)=>{try{
   if(Array.isArray(disponibilidades)){const ins=db.prepare(`INSERT INTO disponibilidades_medicos(medico_id,dia_semana,horario_inicio,horario_fim) VALUES(?,?,?,?)`); disponibilidades.forEach(d=>ins.run(r.lastInsertRowid,d.dia_semana,d.horario_inicio,d.horario_fim))}
   res.status(201).json(carregar(r.lastInsertRowid,u))
 }catch(e){next(e)}})
+// editar medico
 router.put('/:id',(req,res,next)=>{try{
   const u=req.usuario.id,id=Number(req.params.id),ex=carregar(id,u)
   if(!ex)return res.status(404).json({erro:'Médico não encontrado'})
@@ -66,6 +75,8 @@ router.put('/:id',(req,res,next)=>{try{
   sincronizarEspecialidades(id,finalIds,u)
   res.json(carregar(id,u))
 }catch(e){next(e)}})
+// alterar status de medico
 router.patch('/:id/status',(req,res,next)=>{try{const u=req.usuario.id,id=Number(req.params.id),{status}=req.body;if(!['ativo','inativo'].includes(status))return res.status(400).json({erro:'Status deve ser ativo ou inativo'});const r=db.prepare(`UPDATE medicos SET status=? WHERE id=? AND usuario_id=?`).run(status,id,u);if(!r.changes)return res.status(404).json({erro:'Médico não encontrado'});res.json(carregar(id,u))}catch(e){next(e)}})
+// excluir medico
 router.delete('/:id',(req,res,next)=>{try{const u=req.usuario.id,id=Number(req.params.id),ex=carregar(id,u);if(!ex)return res.status(404).json({erro:'Médico não encontrado'});if(db.prepare(`SELECT 1 FROM consultas WHERE medico_id=? AND usuario_id=? LIMIT 1`).get(id,u))return res.status(409).json({erro:'Não é possível excluir o médico porque existem consultas vinculadas. Desative o médico.'});db.prepare(`DELETE FROM medicos WHERE id=? AND usuario_id=?`).run(id,u);res.status(200).json(ex)}catch(e){next(e)}})
 module.exports=router

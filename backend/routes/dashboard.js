@@ -1,9 +1,10 @@
+// Rotas de resumo, agenda e consultas do Dashboard.
 const express = require('express')
 const router = express.Router()
 
 const db = require('../database')
 
-// CONSULTAS DE HOJE
+// visualizar consultas de hoje
 router.get('/consultas-hoje', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -48,7 +49,7 @@ router.get('/consultas-hoje', (req, res, next) => {
   }
 })
 
-// CALENDÁRIO
+// visualizar agenda do calendário
 router.get('/calendario', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -92,6 +93,7 @@ router.get('/calendario', (req, res, next) => {
 })
 
 // RESUMO — SOMENTE DO USUÁRIO LOGADO
+// visualizar resumo do dashboard
 router.get('/summary', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id

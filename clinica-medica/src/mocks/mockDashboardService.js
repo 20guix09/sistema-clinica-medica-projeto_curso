@@ -1,3 +1,5 @@
+// dados e funções usados no modo de teste
+
 import { mockDatabase } from './mockData.js';
 import { clone, waitMock } from './mockUtils.js';
 
@@ -49,6 +51,7 @@ export const mockDashboardService = {
   },
 };
 
+// obtém local date key
 function getLocalDateKey(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

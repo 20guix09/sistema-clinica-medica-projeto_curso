@@ -1,5 +1,8 @@
+// middleware de autenticação das rotas protegidas
+
 const jwt = require('jsonwebtoken')
 
+// função para autenticar token
 function autenticarToken(req, res, next) {
   const authHeader = req.headers.authorization
 

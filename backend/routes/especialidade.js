@@ -1,8 +1,10 @@
+// Rotas de cadastro e gestão de especialidades.
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
 const { validarObrigatorios, validarLista } = require('../helpers/validacao')
 
+// visualizar lista de especialidade
 router.get('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -10,6 +12,7 @@ router.get('/', (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// visualizar especialidade por id
 router.get('/:id', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -19,6 +22,7 @@ router.get('/:id', (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// cadastrar especialidade
 router.post('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -38,6 +42,7 @@ router.post('/', (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// editar especialidade
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id), usuarioId = req.usuario.id
@@ -55,6 +60,7 @@ router.put('/:id', (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// excluir especialidade
 router.delete('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id), usuarioId = req.usuario.id

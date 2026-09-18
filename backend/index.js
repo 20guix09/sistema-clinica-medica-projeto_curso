@@ -1,3 +1,5 @@
+// inicia e configura o servidor da API
+
 require('dotenv').config()
 
 const express = require('express')
@@ -33,13 +35,13 @@ const dashboardRoutes = require('./routes/dashboard')
 const autenticarToken = require('./middlewares/autenticarToken')
 
 // ==========================================
-// ROTAS PÚBLICAS
+// rotas públicas
 // ==========================================
 
 app.use('/auth', authRouter)
 
 // ==========================================
-// ROTAS PROTEGIDAS
+// rotas protegidas
 // ==========================================
 
 app.use('/pacientes', autenticarToken, pacientesRoutes)
@@ -53,7 +55,7 @@ app.use('/medico', autenticarToken, medicoRoutes)
 app.use('/dashboard', autenticarToken, dashboardRoutes)
 
 // ==========================================
-// ROTAS INICIAIS
+// rotas iniciais
 // ==========================================
 
 app.get('/', (req, res) => {
@@ -68,7 +70,7 @@ app.get('/oi', (req, res) => {
 })
 
 // ==========================================
-// MIDDLEWARE GLOBAL DE ERROS
+// middleware global de erros
 // ==========================================
 
 app.use((err, req, res, next) => {
@@ -83,7 +85,7 @@ app.use((err, req, res, next) => {
 })
 
 // ==========================================
-// SERVIDOR
+// servidor
 // ==========================================
 
 app.listen(PORT, () => {

@@ -1,3 +1,5 @@
+// dados e funções usados no modo de teste
+
 export const mockDatabase = {
   usuarios: [
     {

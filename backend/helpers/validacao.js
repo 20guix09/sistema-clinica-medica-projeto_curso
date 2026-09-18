@@ -1,5 +1,6 @@
 // Verifica campos obrigatórios
 
+// valida obrigatorios
 function validarObrigatorios(dados, campos) {
   return campos
     .filter(campo => {
@@ -17,6 +18,7 @@ function validarObrigatorios(dados, campos) {
 
 // Valida números dentro de um intervalo
 
+// valida range
 function validarRange(campo, valor, min, max) {
   if (
     typeof valor !== 'number' ||
@@ -32,6 +34,7 @@ function validarRange(campo, valor, min, max) {
 
 // Valida valores permitidos
 
+// valida lista
 function validarLista(campo, valor, permitidos) {
   if (
     valor !== undefined &&
@@ -46,6 +49,7 @@ function validarLista(campo, valor, permitidos) {
 
 // Valida email
 
+// função para email valido
 function emailValido(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }

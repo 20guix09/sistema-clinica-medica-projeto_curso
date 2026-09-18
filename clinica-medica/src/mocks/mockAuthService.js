@@ -1,3 +1,5 @@
+// dados e funções usados no modo de teste
+
 import { mockDatabase } from './mockData.js';
 import { waitMock } from './mockUtils.js';
 

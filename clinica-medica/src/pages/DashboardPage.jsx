@@ -1,31 +1,28 @@
+// página principal desta área do sistema
+
 import {
   Activity,
   CalendarClock,
   CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Edit3,
-  Eye,
   History,
   Info,
   LayoutDashboard,
   LogOut,
   Menu,
   MoreHorizontal,
-  Plus,
-  RotateCcw,
   Search,
   Stethoscope,
-  Trash2,
-  UserRound,
   UsersRound,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import MobileRotateNotice from '../components/MobileRotateNotice.jsx';
+import OnboardingTutorial from '../components/OnboardingTutorial.jsx';
+import { MetricCard, MiniCalendar, StatusBadge } from '../components/dashboard/DashboardWidgets.jsx';
+import ResourcePage, { ResourceModal } from '../components/resources/ResourcePage.jsx';
+import SystemModal from '../components/system/SystemModal.jsx';
 import { consultasService } from '../services/consultasService.js';
 import { dashboardService } from '../services/dashboardService.js';
 import { especialidadesService } from '../services/especialidadesService.js';
@@ -41,83 +38,6 @@ const navItems = [
   { label: 'Consultas', path: '/consultas', icon: CalendarClock },
   { label: 'Especialidades', path: '/especialidades', icon: Activity },
 ];
-
-const statusTone = {
-  Ativo: 'success',
-  ativo: 'success',
-  Inativo: 'muted',
-  inativo: 'muted',
-  Confirmada: 'info',
-  confirmada: 'info',
-  Pendente: 'warning',
-  pendente: 'warning',
-  Finalizada: 'success',
-  finalizada: 'success',
-  Cancelada: 'danger',
-  cancelada: 'danger',
-};
-
-const fieldPlaceholders = {
-  nome: 'Ex.: Mariana Oliveira',
-  cpf: 'Ex.: 123.456.789-01',
-  tel: 'Ex.: (11) 99999-1234',
-  telefone: 'Ex.: (11) 99999-1234',
-  email: 'Ex.: exemplo@e-mail.com',
-  nasc: 'Ex.: 29/08/1990',
-  dataNascimento: 'Ex.: 29/08/1990',
-  data_nascimento: 'Ex.: 29/08/1990',
-  sexo: 'Ex.: Masculino',
-  cep: 'Ex.: 86000-000',
-  rua: 'Ex.: Rua das Flores',
-  num: 'Ex.: 120',
-  numero: 'Ex.: 120',
-  comp: 'Ex.: Apto. 12',
-  complemento: 'Ex.: Apto. 12',
-  bairro: 'Ex.: Centro',
-  cid: 'Ex.: Londrina',
-  cidade: 'Ex.: Londrina',
-  est: 'Ex.: PR',
-  estado: 'Ex.: PR',
-  crm: 'Ex.: CRM-SP 123456',
-  especialidade: 'Ex.: Cardiologia',
-  estado_crm: 'Ex.: PR',
-  especialidade_id: 'Selecione uma especialidade',
-  data: 'Ex.: 29/08/2026',
-  horario: 'Ex.: 08:30',
-  paciente: 'Ex.: Ana Beatriz Costa',
-  medico: 'Ex.: Dra. Helena Duarte',
-  tipo: 'Ex.: Consulta de retorno',
-  observacao: 'Ex.: Retorno com exames em mãos.',
-  descricao: 'Ex.: Atendimento e acompanhamento especializado.',
-};
-
-const resourceNames = {
-  consultas: 'Consulta',
-  especialidades: 'Especialidade',
-  medicos: 'Médico',
-  pacientes: 'Paciente',
-};
-
-const pacienteAliases = {
-  telefone: ['telefone', 'tel'],
-  data_nascimento: ['data_nascimento', 'nasc', 'dataNascimento'],
-  numero: ['numero', 'num'],
-  complemento: ['complemento', 'comp'],
-  cidade: ['cidade', 'cid'],
-  estado: ['estado', 'est'],
-};
-
-function getResourceFieldValue(resource, key, item = {}) {
-  if (resource === 'pacientes' && pacienteAliases[key]) {
-    for (const alias of pacienteAliases[key]) {
-      const value = item?.[alias];
-      if (value !== undefined && value !== null && value !== '') return value;
-    }
-    return '';
-  }
-
-  return item?.[key] ?? '';
-}
 
 // O backend atual expõe médicos em /medico (singular).
 // Mantemos esta adaptação aqui para não depender de um endpoint incorreto
@@ -162,33 +82,7 @@ const medicosService = {
   },
 };
 
-const systemGuide = [
-  {
-    title: 'Para que serve',
-    text: 'O MedAgenda organiza a rotina da clínica em um painel único: pacientes, médicos, consultas, especialidades, agenda do mês e resumo do dia.',
-  },
-  {
-    title: 'Dashboard',
-    text: 'Mostra a visão geral com consultas de hoje, pacientes cadastrados, médicos ativos, pendências e um calendário para conferir a agenda por dia.',
-  },
-  {
-    title: 'Pacientes',
-    text: 'Permite cadastrar, pesquisar, visualizar, editar e excluir pacientes, mantendo os principais dados de contato sempre acessiveis.',
-  },
-  {
-    title: 'Médicos',
-    text: 'Reúne profissionais, CRM, especialidade, contato e status de atendimento para facilitar a organização da equipe.',
-  },
-  {
-    title: 'Consultas',
-    text: 'Centraliza os agendamentos, horários, paciente, médico, especialidade, tipo, status e observações de atendimento.',
-  },
-  {
-    title: 'Especialidades',
-    text: 'Organiza as áreas de atendimento oferecidas pela clínica e ajuda a conectar médicos e consultas a cada especialidade.',
-  },
-];
-
+// obtém time greeting
 function getTimeGreeting() {
   const hour = new Date().getHours();
 
@@ -197,6 +91,7 @@ function getTimeGreeting() {
   return 'Boa noite';
 }
 
+// obtém user greeting
 function getUserGreeting(user, firstName) {
   const userKey = user?.id ?? user?.email ?? firstName.toLowerCase();
   const storageKey = `medagenda:welcome-seen:${userKey}`;
@@ -209,6 +104,7 @@ function getUserGreeting(user, firstName) {
   return `${getTimeGreeting()}, ${firstName}`;
 }
 
+// obtém display name
 function getDisplayName(user) {
   const name = user?.nome?.trim();
 
@@ -341,6 +237,7 @@ const pages = {
   },
 };
 
+// componente dashboard page
 export default function DashboardPage() {
   const { logout, user } = useAuth();
   const location = useLocation();
@@ -352,6 +249,7 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [systemModal, setSystemModal] = useState(null);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(() => window.sessionStorage.getItem('medagenda:novoUsuario') === 'true');
   const historyStorageKey = `medagenda:deleted-history:${user?.id ?? user?.email ?? 'usuario'}`;
   const [deletedHistory, setDeletedHistory] = useState(() => {
     try {
@@ -432,6 +330,7 @@ export default function DashboardPage() {
     }
   }, [deletedHistory, historyStorageKey]);
 
+// função para handle record deleted
   function handleRecordDeleted(entry) {
     setDeletedHistory((current) => [
       {
@@ -446,6 +345,7 @@ export default function DashboardPage() {
     ]);
   }
 
+// função para handle record restore
   async function handleRecordRestore(entry) {
     const config = Object.values(pages).find((page) => page.resource === entry.resource);
 
@@ -469,6 +369,12 @@ export default function DashboardPage() {
     setToastMessage(`${entry.resourceLabel} restaurado com sucesso.`);
     setResourceRefreshKey((current) => current + 1);
     await loadDashboard();
+  }
+
+  // Fecha o onboarding e marca esta sessão como concluída.
+  function closeTutorial() {
+    window.sessionStorage.removeItem('medagenda:novoUsuario');
+    setIsTutorialOpen(false);
   }
 
   return (
@@ -662,8 +568,15 @@ export default function DashboardPage() {
           mode={systemModal}
           onClose={() => setSystemModal(null)}
           onRestore={handleRecordRestore}
+          onOpenTutorial={() => {
+            setSystemModal(null);
+            setIsTutorialOpen(true);
+          }}
         />
       ) : null}
+
+      <OnboardingTutorial open={isTutorialOpen} onClose={closeTutorial} />
+      <MobileRotateNotice />
 
       {toastMessage ? (
         <div className="app-toast" role="status" aria-live="polite">
@@ -672,890 +585,4 @@ export default function DashboardPage() {
       ) : null}
     </main>
   );
-}
-
-function MetricCard({ detail, icon: Icon, label, value }) {
-  return (
-    <article className="metric-card">
-      <div>
-        <span>{label}</span>
-        <strong>{value ?? '--'}</strong>
-        <small>{detail}</small>
-      </div>
-      <div className="metric-icon">
-        <Icon size={20} strokeWidth={1.65} />
-      </div>
-    </article>
-  );
-}
-
-function StatusBadge({ status }) {
-  return <span className={`status-badge is-${statusTone[status] ?? 'info'}`}>{status}</span>;
-}
-
-function MiniCalendar({ calendario }) {
-  const initialMonth = useMemo(() => {
-    const firstDate = calendario[0]?.data ? new Date(`${calendario[0].data}T12:00:00`) : new Date();
-    return new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
-  }, [calendario]);
-  const [visibleMonth, setVisibleMonth] = useState(initialMonth);
-  const [selectedDay, setSelectedDay] = useState(null);
-
-  useEffect(() => {
-    setVisibleMonth(initialMonth);
-    setSelectedDay(null);
-  }, [initialMonth]);
-
-  const scheduledDays = useMemo(() => {
-  const grouped = new Map();
-
-  calendario.forEach((consulta) => {
-    if (!consulta?.data) return;
-
-    const date = new Date(`${consulta.data}T12:00:00`);
-
-    if (
-      date.getFullYear() !== visibleMonth.getFullYear() ||
-      date.getMonth() !== visibleMonth.getMonth()
-    ) {
-      return;
-    }
-
-    const day = Number(consulta.data.split('-')[2]);
-
-    if (!grouped.has(day)) {
-      grouped.set(day, {
-        consultas: [],
-        total: 0,
-      });
-    }
-
-    grouped.get(day).consultas.push(consulta);
-    grouped.get(day).total += 1;
-  });
-
-  return grouped;
-}, [calendario, visibleMonth]);
-  
-  const selectedAppointments = selectedDay ? (scheduledDays.get(selectedDay)?.consultas ?? []) : [];
-  const monthLabel = visibleMonth.toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric',
-  });
-  const daysInMonth = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 0).getDate();
-  const firstWeekDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1).getDay();
-  const monthDays = Array.from({ length: daysInMonth }, (_, index) => index + 1);
-  const emptyDays = Array.from({ length: firstWeekDay }, (_, index) => `empty-${index}`);
-  const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-
-  function changeMonth(direction) {
-    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
-    setSelectedDay(null);
-  }
-
-  return (
-    <div className="mini-calendar">
-      <div className="mini-calendar-title">
-        <div>
-          <strong>{monthLabel}</strong>
-          <span>{scheduledDays.size} dias com agenda</span>
-        </div>
-        <div className="mini-calendar-actions">
-          <button type="button" onClick={() => changeMonth(-1)} aria-label="Mês anterior">
-            <ChevronLeft size={16} strokeWidth={1.7} />
-          </button>
-          <button type="button" onClick={() => changeMonth(1)} aria-label="Próximo mês">
-            <ChevronRight size={16} strokeWidth={1.7} />
-          </button>
-        </div>
-      </div>
-
-      <div className="mini-calendar-week" aria-hidden="true">
-        {weekDays.map((day, index) => (
-          <span key={`${day}-${index}`}>{day}</span>
-        ))}
-      </div>
-
-      <div className="mini-calendar-grid">
-        {emptyDays.map((day) => (
-          <span key={day} aria-hidden="true" />
-        ))}
-        {monthDays.map((day) => {
-          const appointments = scheduledDays.get(day)?.total;
-          const hoje = new Date();
-          const isToday =
-            hoje.getFullYear() === visibleMonth.getFullYear() &&
-            hoje.getMonth() === visibleMonth.getMonth() &&
-            hoje.getDate() === day;
-
-          return (
-            <button
-              className={`${appointments ? 'has-events' : ''} ${selectedDay === day ? 'is-selected' : ''} ${isToday ? 'is-today' : ''}`}
-              key={day}
-              type="button"
-              onClick={() => setSelectedDay((current) => (current === day ? null : day))}
-            >
-              <span>{day}</span>
-              {appointments ? <small>{appointments}</small> : null}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="calendar-day-card">
-        {selectedDay ? (
-          <>
-            <strong>Dia {String(selectedDay).padStart(2, '0')}</strong>
-            {selectedAppointments.length ? (
-              <div className="calendar-day-list">
-                {selectedAppointments.map((consulta) => (
-                  <div key={consulta.id}>
-                    <span>{consulta.horario}</span>
-                    <p>{consulta.paciente}</p>
-                    <small>{consulta.medico}</small>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>Nenhuma consulta marcada para este dia.</p>
-            )}
-          </>
-        ) : (
-          <p>Selecione um dia para ver os horários.</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ResourcePage({ config, onDataChange, onRecordDeleted, refreshKey }) {
-  const [items, setItems] = useState([]);
-  const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [modal, setModal] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadItems() {
-      setIsLoading(true);
-      const data = await config.service.list();
-
-      if (!isMounted) return;
-      setItems(data);
-      setIsLoading(false);
-    }
-
-    loadItems();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [config, refreshKey]);
-
-  const filteredItems = useMemo(() => {
-    const search = query
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-
-    if (!search) return items;
-
-    return items.filter((item) => {
-      const searchableKeys = config.searchKeys ?? Object.keys(item ?? {});
-
-      return searchableKeys.some((key) =>
-        String(item?.[key] ?? '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-          .includes(search),
-      );
-    });
-  }, [items, query, config.searchKeys]);
-
-  async function reloadItems() {
-    setIsLoading(true);
-    const data = await config.service.list();
-    setItems(data);
-    setIsLoading(false);
-  }
-
-  async function openModal(mode, item = null) {
-    if (mode === 'create' || !item?.id) {
-      setModal({ mode, item: item ?? {} });
-      return;
-    }
-
-    try {
-      // Busca o registro completo antes de visualizar/editar.
-      // Assim campos que não aparecem na tabela continuam disponíveis no modal.
-      const completo = await config.service.getById(item.id);
-      setModal({ mode, item: completo ?? item });
-    } catch (error) {
-      console.error(`Erro ao carregar ${config.resource}:`, error);
-      setModal({ mode, item });
-    }
-  }
-
-  async function handleSave(values) {
-    try {
-      if (modal?.mode === 'edit') {
-        await config.service.update(modal.item.id, values);
-      } else {
-        const payload = { ...values };
-
-        if (config.resource === 'consultas') {
-          payload.status = payload.status || 'pendente';
-        }
-
-        await config.service.create(payload);
-      }
-
-      setModal(null);
-      await reloadItems();
-      await onDataChange();
-    } catch (error) {
-      console.error(`Erro ao salvar ${config.resource}:`, error);
-      window.alert(error?.message || 'Não foi possível salvar o registro.');
-    }
-  }
-
-  async function handleDelete(item) {
-    const result = await config.service.remove(item.id);
-    onRecordDeleted({
-      resource: config.resource,
-      resourceLabel: resourceNames[config.resource] ?? config.title,
-      record: result?.record ?? item,
-    });
-    await reloadItems();
-    await onDataChange();
-  }
-
-  return (
-    <>
-      <section className="dashboard-hero resource-hero">
-        <div>
-          <p>MedAgenda</p>
-          <h1>{config.title}</h1>
-          <span>{config.subtitle}</span>
-        </div>
-        <button className="dashboard-primary-action interactive-press" type="button" onClick={() => openModal('create')}>
-          <Plus size={18} strokeWidth={1.7} />
-          <span>{config.action}</span>
-        </button>
-      </section>
-
-      <article className="dashboard-panel resource-panel">
-        <div className="resource-toolbar">
-          <label className="app-search resource-search">
-            <Search size={18} strokeWidth={1.6} />
-            <input type="search" placeholder={config.search} value={query} onChange={(event) => setQuery(event.target.value)} />
-          </label>
-          <span>{isLoading ? 'Carregando' : `${filteredItems.length} registros`}</span>
-        </div>
-
-        <div className="resource-table-wrap">
-          <table className="resource-table">
-            <thead>
-              <tr>
-                {config.columns.map(([, label]) => (
-                  <th key={label}>{label}</th>
-                ))}
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item) => (
-                <tr key={item.id}>
-                  {config.columns.map(([key]) => (
-                    <td key={key}>{key === 'status' ? <StatusBadge status={item[key]} /> : item[key] || '-'}</td>
-                  ))}
-                  <td>
-                    <div className="resource-actions">
-                      <button type="button" aria-label="Visualizar" onClick={() => openModal('view', item)}>
-                        <Eye size={16} strokeWidth={1.65} />
-                      </button>
-                      <button type="button" aria-label="Editar" onClick={() => openModal('edit', item)}>
-                        <Edit3 size={16} strokeWidth={1.65} />
-                      </button>
-                      <button type="button" aria-label="Excluir" onClick={() => handleDelete(item)}>
-                        <Trash2 size={16} strokeWidth={1.65} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </article>
-
-      {modal ? (
-        <ResourceModal
-          config={config}
-          item={modal.item}
-          mode={modal.mode}
-          onClose={() => setModal(null)}
-          onSave={handleSave}
-        />
-      ) : null}
-    </>
-  );
-}
-
-function ResourceModal({ config, item = {}, mode, onClose, onSave }) {
-  const isView = mode === 'view';
-  const title =
-    mode === 'create'
-      ? config.action
-      : mode === 'edit'
-        ? `Editar ${resourceNames[config.resource] ?? config.title}`
-        : `Detalhes de ${resourceNames[config.resource] ?? config.title}`;
-
-  const [formValues, setFormValues] = useState(() =>
-    Object.fromEntries(
-      config.fields
-        .filter(([, , type]) => !['select', 'patient', 'doctor', 'specialty', 'specialties'].includes(type))
-        .map(([key]) => [key, getResourceFieldValue(config.resource, key, item)]),
-    ),
-  );
-
-  const [selectValues, setSelectValues] = useState(() =>
-    Object.fromEntries(
-      config.fields
-        .filter(([, , type]) => type === 'select')
-        .map(([key, , , options]) => [key, item[key] ?? options?.[0] ?? '']),
-    ),
-  );
-
-  const [relationOptions, setRelationOptions] = useState({
-    patient: [],
-    doctor: [],
-    specialty: [],
-    specialties: [],
-  });
-  const [relationValues, setRelationValues] = useState(() => ({
-    patient: item.paciente_id ?? '',
-    doctor: item.medico_id ?? '',
-    specialty: item.especialidade_id ?? '',
-    specialties: item.especialidade_ids ?? (item.especialidade_id ? [item.especialidade_id] : []),
-  }));
-  const [isLoadingRelations, setIsLoadingRelations] = useState(false);
-  const [specialtiesOpen, setSpecialtiesOpen] = useState(false);
-  const specialtiesPickerRef = useRef(null);
-
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (specialtiesPickerRef.current && !specialtiesPickerRef.current.contains(event.target)) {
-        setSpecialtiesOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadRelations() {
-      const relationTypes = config.fields
-        .map(([, , type]) => type)
-        .filter((type) => ['patient', 'doctor', 'specialty', 'specialties'].includes(type));
-
-      if (!relationTypes.length) return;
-
-      setIsLoadingRelations(true);
-
-      try {
-        const requests = relationTypes.map((type) => {
-          if (type === 'patient') return pacientesService.list();
-          if (type === 'doctor') return medicosService.list();
-          return especialidadesService.list();
-        });
-
-        const results = await Promise.all(requests);
-
-        if (!isMounted) return;
-
-        const next = { patient: [], doctor: [], specialty: [], specialties: [] };
-
-        relationTypes.forEach((type, index) => {
-          const options = Array.isArray(results[index]) ? results[index] : [];
-
-          next[type] = options.filter((option) => {
-            const ativo = !option?.status || String(option.status).toLowerCase() === 'ativo';
-            if (ativo) return true;
-            if (mode !== 'edit') return false;
-
-            if (type === 'doctor') return Number(option.id) === Number(item.medico_id);
-            if (type === 'specialty') return Number(option.id) === Number(item.especialidade_id);
-            if (type === 'specialties') {
-              return (item.especialidade_ids ?? []).map(Number).includes(Number(option.id));
-            }
-            return false;
-          });
-        });
-
-        setRelationOptions(next);
-      } catch (error) {
-        console.error('Erro ao carregar opções do formulário:', error);
-      } finally {
-        if (isMounted) setIsLoadingRelations(false);
-      }
-    }
-
-    loadRelations();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [config]);
-
-  function handleSubmit(event) {
-    event.preventDefault();
-
-    const values = Object.fromEntries(new FormData(event.currentTarget).entries());
-
-    if (config.resource === 'medicos') {
-      values.especialidade_ids = relationValues.specialties;
-      values.especialidade_id = relationValues.specialties?.[0] ?? '';
-    }
-    if (config.resource === 'medicos' && !relationValues.specialties?.length) {
-      window.alert('Selecione pelo menos uma especialidade para o médico.');
-      return;
-    }
-
-    if (config.resource === 'consultas') {
-      values.paciente_id = relationValues.patient;
-      values.medico_id = relationValues.doctor;
-      values.especialidade_id = relationValues.specialty;
-
-      if (mode === 'create') values.status = 'pendente';
-    }
-
-    Object.entries(values).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        values[key] = value.trim();
-      }
-    });
-
-    onSave(values);
-  }
-
-  function getRelationLabel(type, option) {
-    if (type === 'patient') return option.nome;
-    if (type === 'doctor') {
-      return option.nome
-        ? `${option.nome}${option.crm ? ` — ${option.crm}` : ''}`
-        : '';
-    }
-    return option.nome;
-  }
-
-  return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="resource-modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="modal-heading">
-          <div>
-            <p>MedAgenda</p>
-            <h2>{title}</h2>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Fechar">
-            x
-          </button>
-        </div>
-
-        {isView ? (
-          <div className="detail-summary">
-            {config.fields.map(([key, label, type]) => {
-              let value = getResourceFieldValue(config.resource, key, item);
-
-              if (type === 'patient') value = item.paciente ?? item.paciente_id;
-              if (type === 'doctor') value = item.medico ?? item.medico_id;
-              if (type === 'specialty') value = item.especialidade ?? item.especialidade_id;
-              if (type === 'specialties') value = item.especialidades_nomes ?? item.especialidade ?? '-';
-
-              return (
-                <div
-                  className={key === 'observacao' || key === 'descricao' ? 'is-wide' : ''}
-                  key={key}
-                >
-                  <span>{label}</span>
-                  {key === 'status' ? (
-                    <StatusBadge status={item[key]} />
-                  ) : (
-                    <strong>{value || '-'}</strong>
-                  )}
-                </div>
-              );
-            })}
-
-            <div className="modal-actions">
-              <button type="button" onClick={onClose}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form className="modal-form" onSubmit={handleSubmit}>
-            {config.fields.map(([key, label, type = 'text', options]) => {
-              if (config.resource === 'consultas' && mode === 'create' && key === 'status') return null;
-
-              return (
-              <label key={key}>
-                <span>{label}</span>
-
-                {type === 'select' ? (
-                  <FieldSelect
-                    name={key}
-                    options={options}
-                    value={selectValues[key]}
-                    onChange={(value) =>
-                      setSelectValues((current) => ({
-                        ...current,
-                        [key]: value,
-                      }))
-                    }
-                  />
-                ) : type === 'specialties' ? (
-                  <div className={`specialties-dropdown ${specialtiesOpen ? 'is-open' : ''}`} ref={specialtiesPickerRef}>
-                    <button
-                      type="button"
-                      className="specialties-trigger"
-                      disabled={isLoadingRelations}
-                      onClick={() => setSpecialtiesOpen((open) => !open)}
-                      aria-expanded={specialtiesOpen}
-                    >
-                      <span>
-                        {(relationValues.specialties ?? []).length
-                          ? `${(relationValues.specialties ?? []).length} especialidade${(relationValues.specialties ?? []).length > 1 ? 's' : ''} selecionada${(relationValues.specialties ?? []).length > 1 ? 's' : ''}`
-                          : 'Selecionar especialidade'}
-                      </span>
-                      {specialtiesOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-
-                    {specialtiesOpen && (
-                      <div className="specialties-menu">
-                        {(relationOptions.specialties ?? []).map((option) => {
-                          const checked = (relationValues.specialties ?? []).map(Number).includes(Number(option.id));
-                          return (
-                            <button
-                              type="button"
-                              className={`specialty-option ${checked ? 'is-selected' : ''}`}
-                              key={option.id}
-                              onClick={() => setRelationValues((current) => ({
-                                ...current,
-                                specialties: checked
-                                  ? (current.specialties ?? []).filter((id) => Number(id) !== Number(option.id))
-                                  : [...(current.specialties ?? []), option.id],
-                              }))}
-                            >
-                              <span>{option.nome}</span>
-                              <span className="specialty-radio" aria-hidden="true">
-                                {checked && <span />}
-                              </span>
-                            </button>
-                          );
-                        })}
-                        {!(relationOptions.specialties ?? []).length && (
-                          <div className="specialties-empty">Cadastre uma especialidade primeiro.</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : ['patient', 'doctor', 'specialty'].includes(type) ? (
-                  <RelationSelect
-                    name={key}
-                    relationType={type}
-                    options={relationOptions[type]}
-                    value={relationValues[type]}
-                    disabled={isLoadingRelations}
-                    onChange={(value) =>
-                      setRelationValues((current) => ({
-                        ...current,
-                        [type]: value,
-                      }))
-                    }
-                    getLabel={getRelationLabel}
-                  />
-                ) : (
-                  <div className="modal-input-wrap">
-                    {key === 'observacao' || key === 'descricao' ? (
-                      <textarea
-                        name={key}
-                        value={formValues[key] ?? ''}
-                        placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
-                        onChange={(event) =>
-                          setFormValues((current) => ({
-                            ...current,
-                            [key]: event.target.value,
-                          }))
-                        }
-                      />
-                    ) : (
-                      <input
-                        name={key}
-                        type={type}
-                        value={formValues[key] ?? ''}
-                        max={config.resource === 'pacientes' && key === 'data_nascimento' ? new Date().toLocaleDateString('en-CA') : undefined}
-                        required={config.resource === 'pacientes' && ['numero', 'complemento'].includes(key)}
-                        placeholder={config.placeholders?.[key] ?? fieldPlaceholders[key]}
-                        onChange={async (event) => {
-                          const value = event.target.value;
-                          setFormValues((current) => ({ ...current, [key]: value }));
-
-                          if (config.resource === 'pacientes' && key === 'cep') {
-                            const cepLimpo = value.replace(/\D/g, '');
-                            if (cepLimpo.length === 8) {
-                              try {
-                                const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-                                const endereco = await response.json();
-                                if (!endereco.erro) {
-                                  setFormValues((current) => ({
-                                    ...current,
-                                    cep: value,
-                                    rua: endereco.logradouro ?? '',
-                                    bairro: endereco.bairro ?? '',
-                                    cidade: endereco.localidade ?? '',
-                                    estado: endereco.uf ?? '',
-                                  }));
-                                }
-                              } catch (error) {
-                                console.error('Erro ao consultar CEP:', error);
-                              }
-                            }
-                          }
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
-              </label>
-              );
-            })}
-
-            <div className="modal-actions">
-              <button className="modal-cancel-action" type="button" onClick={onClose}>
-                Cancelar
-              </button>
-              <button className="modal-save-action" type="submit">
-                <span>Salvar</span>
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function RelationSelect({
-  name,
-  relationType,
-  options,
-  value,
-  disabled,
-  onChange,
-  getLabel,
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    function handleOutsideClick(event) {
-      if (!selectRef.current?.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isOpen]);
-
-  const selected = options.find((option) => String(option.id) === String(value));
-  const selectedLabel = selected ? getLabel(relationType, selected) : 'Selecione uma opção';
-
-  return (
-    <div className={`modal-select ${isOpen ? 'is-open' : ''}`} ref={selectRef}>
-      <input type="hidden" name={name} value={value ?? ''} />
-
-      <button
-        className="modal-select-trigger"
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        disabled={disabled}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span>{disabled ? 'Carregando...' : selectedLabel}</span>
-        {isOpen ? (
-          <ChevronUp size={17} strokeWidth={1.7} />
-        ) : (
-          <ChevronDown size={17} strokeWidth={1.7} />
-        )}
-      </button>
-
-      {isOpen ? (
-        <div className="modal-select-menu" role="listbox" aria-label={name}>
-          {options.length ? (
-            options.map((option) => (
-              <button
-                className={String(option.id) === String(value) ? 'is-selected' : ''}
-                key={option.id}
-                type="button"
-                role="option"
-                aria-selected={String(option.id) === String(value)}
-                onClick={() => {
-                  onChange(String(option.id));
-                  setIsOpen(false);
-                }}
-              >
-                {getLabel(relationType, option)}
-              </button>
-            ))
-          ) : (
-            <span className="modal-select-empty">Nenhuma opção cadastrada.</span>
-          )}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function FieldSelect({ name, options, value, onChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    function handleOutsideClick(event) {
-      if (!selectRef.current?.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isOpen]);
-
-  return (
-    <div className={`modal-select ${isOpen ? 'is-open' : ''}`} ref={selectRef}>
-      <input type="hidden" name={name} value={value} />
-      <button
-        className="modal-select-trigger"
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span>{value}</span>
-        {isOpen ? <ChevronUp size={17} strokeWidth={1.7} /> : <ChevronDown size={17} strokeWidth={1.7} />}
-      </button>
-      {isOpen ? (
-        <div className="modal-select-menu" role="listbox" aria-label={name}>
-          {options.map((option) => (
-            <button
-              className={option === value ? 'is-selected' : ''}
-              key={option}
-              type="button"
-              role="option"
-              aria-selected={option === value}
-              onClick={() => {
-                onChange(option);
-                setIsOpen(false);
-              }}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function SystemModal({ deletedHistory, mode, onClose, onRestore }) {
-  const isHistory = mode === 'history';
-
-  return (
-    <div className="modal-backdrop" role="presentation">
-      <section className={`resource-modal system-modal ${isHistory ? 'is-history' : ''}`} role="dialog" aria-modal="true" aria-label={isHistory ? 'Histórico' : 'Informações'}>
-        <div className="modal-heading">
-          <div>
-            <p>MedAgenda</p>
-            <h2>{isHistory ? 'Histórico' : 'Informações do sistema'}</h2>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Fechar">
-            x
-          </button>
-        </div>
-
-        {isHistory ? (
-          <div className="history-list">
-            {deletedHistory.length ? (
-              deletedHistory.map((entry) => (
-                <article key={entry.id}>
-                  <div>
-                    <span>{entry.restored ? `${entry.resourceLabel} restaurado` : `${entry.resourceLabel} excluído`}</span>
-                    <strong>{getRecordTitle(entry.record)}</strong>
-                  </div>
-                  <small>{entry.restored ? `Restaurado em ${entry.restoredAt}` : `Excluído em ${entry.date}`}</small>
-                  <p>{getRecordSummary(entry.record)}</p>
-                  <button className="history-restore-action" type="button" onClick={() => onRestore(entry)} disabled={entry.restored}>
-                    <RotateCcw size={15} strokeWidth={1.8} />
-                    <span>{entry.restored ? 'Restaurado' : 'Restaurar'}</span>
-                  </button>
-                </article>
-              ))
-            ) : (
-              <p>Nenhum registro excluído por enquanto.</p>
-            )}
-            <div className="modal-actions">
-              <button type="button" onClick={onClose}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="system-info-grid">
-            {systemGuide.map((section) => (
-              <article key={section.title}>
-                <strong>{section.title}</strong>
-                <p>{section.text}</p>
-              </article>
-            ))}
-            <div className="modal-actions">
-              <button type="button" onClick={onClose}>
-                Fechar
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function getRecordTitle(record) {
-  return record?.nome ?? record?.paciente ?? record?.especialidade ?? record?.email ?? 'Registro sem nome';
-}
-
-function getRecordSummary(record) {
-  const details = [
-    record?.cpf,
-    record?.crm,
-    record?.telefone,
-    record?.email,
-    record?.medico,
-    record?.data && record?.horario ? `${record.data} às ${record.horario}` : record?.data,
-    record?.status,
-  ].filter(Boolean);
-
-  return details.length ? details.join(' - ') : 'Sem detalhes adicionais.';
 }

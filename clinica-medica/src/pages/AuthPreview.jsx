@@ -1,9 +1,12 @@
+// página principal desta área do sistema
+
 import { Eye, EyeOff, HeartPulse, Lock, Mail, UserRound } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import '../styles/auth-preview.css';
 
+// componente auth preview
 export default function AuthPreview() {
   const [mode, setMode] = useState('login');
   const [isLoading, setIsLoading] = useState(true);
@@ -11,7 +14,7 @@ export default function AuthPreview() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { cadastro, login } = useAuth();
+  const { cadastro, login, loginGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isRegister = mode === 'register';
@@ -44,6 +47,7 @@ export default function AuthPreview() {
     [isRegister],
   );
 
+// função para handle auth submit
   async function handleAuthSubmit(values) {
     setAuthError('');
     setIsSubmitting(true);
@@ -60,6 +64,8 @@ export default function AuthPreview() {
           nome: values.nome,
           senha: values.senha,
         });
+        // Uma conta recém-criada recebe o tutorial no primeiro acesso.
+        window.sessionStorage.setItem('medagenda:novoUsuario', 'true');
       } else {
         await login(values);
       }
@@ -67,6 +73,25 @@ export default function AuthPreview() {
       navigate(location.state?.from?.pathname ?? '/dashboard', { replace: true });
     } catch (error) {
       setAuthError(error.message ?? 'Não foi possível acessar sua conta agora.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+// função para handle google credential
+  async function handleGoogleCredential(credential) {
+    setAuthError('');
+    setIsSubmitting(true);
+
+    try {
+      const session = await loginGoogle(credential);
+      // Guardamos a informação para o onboarding que será criado na próxima etapa.
+      if (session.novoUsuario) {
+        window.sessionStorage.setItem('medagenda:novoUsuario', 'true');
+      }
+      navigate(location.state?.from?.pathname ?? '/dashboard', { replace: true });
+    } catch (error) {
+      setAuthError(error.message ?? 'Não foi possível entrar com o Google.');
     } finally {
       setIsSubmitting(false);
     }
@@ -82,6 +107,7 @@ export default function AuthPreview() {
             error={authError}
             isSubmitting={isSubmitting}
             onSubmit={handleAuthSubmit}
+            onGoogleCredential={handleGoogleCredential}
             title="Bem-vindo de volta"
             subtitle="Acesse seu painel médico"
             submitLabel="Entrar"
@@ -113,6 +139,7 @@ export default function AuthPreview() {
             error={authError}
             isSubmitting={isSubmitting}
             onSubmit={handleAuthSubmit}
+            onGoogleCredential={handleGoogleCredential}
             title="Criar sua conta"
             subtitle="Comece a utilizar a plataforma"
             submitLabel="Criar conta"
@@ -171,6 +198,7 @@ export default function AuthPreview() {
   );
 }
 
+// componente loading intro
 function LoadingIntro({ isVisible }) {
   return (
     <div className={`loading-intro ${isVisible ? 'is-visible' : 'is-hidden'}`} role="status" aria-live="polite" aria-hidden={!isVisible}>
@@ -190,6 +218,7 @@ function LoadingIntro({ isVisible }) {
   );
 }
 
+// componente auth brand
 function AuthBrand() {
   return (
     <div className="auth-brand" aria-label="MedAgenda">
@@ -207,7 +236,9 @@ function AuthBrand() {
   );
 }
 
-function AuthForm({ error, fields, isSubmitting, onSubmit, submitLabel, subtitle, title }) {
+// componente auth form
+function AuthForm({ error, fields, isSubmitting, onGoogleCredential, onSubmit, submitLabel, subtitle, title }) {
+// função para handle submit
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -250,10 +281,80 @@ function AuthForm({ error, fields, isSubmitting, onSubmit, submitLabel, subtitle
       <button className="auth-submit interactive-press" type="submit" disabled={isSubmitting}>
         {isSubmitting ? 'Carregando...' : submitLabel}
       </button>
+
+      <div className="auth-divider"><span>ou</span></div>
+      <GoogleSignInButton disabled={isSubmitting} onCredential={onGoogleCredential} />
     </form>
   );
 }
 
+// componente google sign in button
+function GoogleSignInButton({ disabled, onCredential }) {
+  const buttonRef = useRef(null);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    if (!clientId || disabled) return undefined;
+
+    let cancelled = false;
+
+// função para render google button
+    function renderGoogleButton() {
+      if (cancelled || !window.google?.accounts?.id || !buttonRef.current) return;
+
+      buttonRef.current.innerHTML = '';
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (response?.credential) onCredential(response.credential);
+        },
+      });
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        width: 330,
+      });
+    }
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return () => { cancelled = true; };
+    }
+
+    const existing = document.querySelector('script[data-medagenda-google]');
+    if (existing) {
+      existing.addEventListener('load', renderGoogleButton, { once: true });
+      return () => {
+        cancelled = true;
+        existing.removeEventListener('load', renderGoogleButton);
+      };
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.dataset.medagendaGoogle = 'true';
+    script.addEventListener('load', renderGoogleButton, { once: true });
+    document.head.appendChild(script);
+
+    return () => {
+      cancelled = true;
+      script.removeEventListener('load', renderGoogleButton);
+    };
+  }, [clientId, disabled, onCredential]);
+
+  if (!clientId) {
+    return <p className="google-auth-config-error">Configure VITE_GOOGLE_CLIENT_ID para ativar o Google.</p>;
+  }
+
+  return <div className={`google-signin-wrap ${disabled ? 'is-disabled' : ''}`} ref={buttonRef} />;
+}
+
+// componente password toggle
 function PasswordToggle({ isVisible, onToggle }) {
   const Icon = isVisible ? EyeOff : Eye;
 

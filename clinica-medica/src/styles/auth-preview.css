@@ -314,6 +314,45 @@
   font-weight: 570;
 }
 
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: rgba(100, 116, 139, 0.2);
+}
+
+.google-signin-wrap {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.google-signin-wrap.is-disabled {
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.google-auth-config-error,
+.auth-form-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .auth-mobile-switch {
   display: none;
 }
@@ -524,7 +563,46 @@
     display: none;
   }
 
-  .auth-mobile-switch {
+  
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: rgba(100, 116, 139, 0.2);
+}
+
+.google-signin-wrap {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.google-signin-wrap.is-disabled {
+  opacity: 0.58;
+  pointer-events: none;
+}
+
+.google-auth-config-error,
+.auth-form-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.auth-mobile-switch {
     display: inline-flex;
     width: fit-content;
     border: 0;
@@ -532,4 +610,30 @@
     background: transparent;
     font-weight: 560;
   }
+}
+
+/* Mantém login e cadastro utilizáveis mesmo em telas com pouca altura. */
+.auth-form-panel {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.auth-form-panel-register .auth-form {
+  padding-bottom: 8px;
+}
+
+@media (max-height: 720px) and (min-width: 861px) {
+  .auth-shell { height: calc(100dvh - 24px); min-height: 0; }
+  .auth-form-panel { justify-content: flex-start; gap: 24px; }
+  .auth-form { margin: 0; gap: 12px; }
+}
+
+@media (max-width: 860px) {
+  .auth-preview { display: block; min-height: 100dvh; padding: 10px; overflow-x: hidden; }
+  .auth-shell { width: 100%; overflow: visible; }
+  .auth-form-panel { min-height: 0; padding: 24px 18px; overflow: visible; }
+  .auth-form { width: 100%; margin: 28px 0 0; }
+  .google-signin-wrap { width: 100%; min-width: 0; }
+  .google-signin-wrap > div { max-width: 100% !important; }
 }

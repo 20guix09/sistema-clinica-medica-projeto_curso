@@ -1,6 +1,9 @@
+// rotas da API deste recurso
+
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
+// componente protected route
 export function ProtectedRoute({ children }) {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
@@ -12,6 +15,7 @@ export function ProtectedRoute({ children }) {
   return children;
 }
 
+// componente public route
 export function PublicRoute({ children }) {
   const { isAuthenticated } = useAuth();
 

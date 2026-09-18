@@ -1,9 +1,12 @@
+// comunicação deste recurso com a API
+
 import { apiRequest, shouldUseMocks } from './api.js';
 import { ENDPOINTS } from './endpoints.js';
 import { mockCrudService } from '../mocks/mockCrudService.js';
 
 const resource = 'pacientes';
 
+// função para to backend payload
 function toBackendPayload(payload = {}) {
   return {
     nome: payload.nome,

@@ -1,3 +1,5 @@
+// funções deste arquivo
+
 const db = require('./database')
 
 console.log('\n=== VERIFICAÇÃO DE ISOLAMENTO POR USUÁRIO ===')

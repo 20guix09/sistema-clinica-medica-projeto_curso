@@ -1,8 +1,10 @@
+// Rotas de agendamento e gestão de consultas.
 const express = require('express')
 const router = express.Router()
 const db = require('../database')
 const { validarObrigatorios, validarLista } = require('../helpers/validacao')
 
+// função para consulta completa
 function consultaCompleta(id, usuarioId) {
   return db.prepare(`SELECT c.*, p.nome AS paciente, m.nome AS medico, e.nome AS especialidade
     FROM consultas c
@@ -11,6 +13,7 @@ function consultaCompleta(id, usuarioId) {
     JOIN especialidades e ON e.id=c.especialidade_id AND e.usuario_id=c.usuario_id
     WHERE c.id=? AND c.usuario_id=?`).get(id, usuarioId)
 }
+// valida vinculos
 function validarVinculos(usuarioId, pacienteId, medicoId, especialidadeId) {
   const p = db.prepare(`SELECT id FROM pacientes WHERE id=? AND usuario_id=?`).get(pacienteId, usuarioId)
   const m = db.prepare(`SELECT id FROM medicos WHERE id=? AND usuario_id=?`).get(medicoId, usuarioId)
@@ -24,6 +27,7 @@ function validarVinculos(usuarioId, pacienteId, medicoId, especialidadeId) {
   return null
 }
 
+// visualizar lista de consultas
 router.get('/', (req,res,next)=>{ try {
   const u=req.usuario.id
   res.json(db.prepare(`SELECT c.*, p.nome AS paciente, m.nome AS medico, e.nome AS especialidade
@@ -33,12 +37,14 @@ router.get('/', (req,res,next)=>{ try {
     WHERE c.usuario_id=? ORDER BY c.data,c.horario`).all(u))
 } catch(e){next(e)} })
 
+// visualizar consultas por id
 router.get('/:id',(req,res,next)=>{try{
   const c=consultaCompleta(Number(req.params.id),req.usuario.id)
   if(!c)return res.status(404).json({erro:'Consulta não encontrada'})
   res.json(c)
 }catch(e){next(e)}})
 
+// cadastrar consultas
 router.post('/',(req,res,next)=>{try{
   const u=req.usuario.id
   const {paciente_id,medico_id,especialidade_id,data,horario,tipo,status,observacao}=req.body
@@ -55,6 +61,7 @@ router.post('/',(req,res,next)=>{try{
   res.status(201).json(consultaCompleta(r.lastInsertRowid,u))
 }catch(e){next(e)}})
 
+// editar consultas
 router.put('/:id',(req,res,next)=>{try{
   const id=Number(req.params.id),u=req.usuario.id
   const ex=db.prepare(`SELECT * FROM consultas WHERE id=? AND usuario_id=?`).get(id,u)
@@ -74,6 +81,7 @@ for (const [rota,status] of [['confirmar','confirmada'],['finalizar','finalizada
     res.json(consultaCompleta(id,u))
   }catch(e){next(e)}})
 }
+// PATCH /:id/cancelar
 router.patch('/:id/cancelar',(req,res,next)=>{try{
   const id=Number(req.params.id),u=req.usuario.id
   const motivo=req.body.motivo ?? req.body.motivoCancelamento ?? null
@@ -81,6 +89,7 @@ router.patch('/:id/cancelar',(req,res,next)=>{try{
   if(!r.changes)return res.status(404).json({erro:'Consulta não encontrada'})
   res.json(consultaCompleta(id,u))
 }catch(e){next(e)}})
+// excluir consultas
 router.delete('/:id',(req,res,next)=>{try{
   const id=Number(req.params.id),u=req.usuario.id
   const ex=consultaCompleta(id,u); if(!ex)return res.status(404).json({erro:'Consulta não encontrada'})

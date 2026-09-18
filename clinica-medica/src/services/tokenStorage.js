@@ -1,6 +1,9 @@
+// comunicação deste recurso com a API
+
 const TOKEN_KEY = 'clinica-medica:token';
 const USER_KEY = 'clinica-medica:user';
 
+// função para can use storage
 function canUseStorage() {
   return typeof window !== 'undefined' && Boolean(window.localStorage);
 }

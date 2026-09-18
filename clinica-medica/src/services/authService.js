@@ -1,3 +1,5 @@
+// comunicação deste recurso com a API
+
 import { apiRequest, shouldUseMocks } from './api.js';
 import { ENDPOINTS } from './endpoints.js';
 import { mockAuthService } from '../mocks/mockAuthService.js';
@@ -23,6 +25,32 @@ export const authService = {
     tokenStorage.setUser(normalizedSession.user);
 
     return normalizedSession;
+  },
+
+  async loginGoogle(credential) {
+    if (shouldUseMocks()) {
+      throw new Error('Login com Google requer VITE_USE_MOCKS=false.');
+    }
+
+    const session = await apiRequest(ENDPOINTS.auth.google, {
+      method: 'POST',
+      body: { credential },
+      auth: false,
+    });
+
+    const normalizedSession = normalizeSession(session, { email: session?.usuario?.email ?? 'google@medagenda.com' });
+
+    if (!normalizedSession.token) {
+      throw new Error('O servidor não retornou um token de acesso.');
+    }
+
+    tokenStorage.setToken(normalizedSession.token);
+    tokenStorage.setUser(normalizedSession.user);
+
+    return {
+      ...normalizedSession,
+      novoUsuario: Boolean(session?.novoUsuario),
+    };
   },
 
   async cadastro(payload) {
@@ -56,6 +84,7 @@ export const authService = {
   },
 };
 
+// função para normalize session
 function normalizeSession(session, credentials) {
   const user = session?.usuario ?? session?.user ?? {
     nome: session?.nome ?? credentials.email.split('@')[0],

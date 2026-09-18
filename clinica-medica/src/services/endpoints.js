@@ -1,7 +1,10 @@
+// comunicação deste recurso com a API
+
 export const ENDPOINTS = {
   auth: {
     cadastro: '/auth/cadastro',
     login: '/auth/login',
+    google: '/auth/google',
   },
 
   dashboard: {

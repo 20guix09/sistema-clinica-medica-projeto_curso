@@ -1455,3 +1455,48 @@
   color: #64748b;
   font-size: 0.9rem;
 }
+
+/* Ações extras do modal de informações. */
+.system-info-actions { grid-column: 1 / -1; }
+.system-info-actions .secondary-action { color: var(--primary-dark); background: var(--primary-soft); }
+
+/* No celular, tabelas viram cartões para eliminar rolagem horizontal. */
+@media (max-width: 760px) {
+  .app-workspace, .app-content, .dashboard-content, .dashboard-panel, .resource-panel { min-width: 0; max-width: 100%; }
+  .resource-table-wrap { overflow: visible; }
+  .resource-table, .resource-table tbody, .resource-table tr, .resource-table td { display: block; width: 100%; }
+  .resource-table thead { display: none; }
+  .resource-table { min-width: 0; border-spacing: 0; }
+  .resource-table tbody { display: grid; gap: 12px; }
+  .resource-table tr { overflow: hidden; border: 1px solid rgba(30,41,59,.09); border-radius: 16px; background: rgba(255,255,255,.62); }
+  .resource-table td {
+    display: grid;
+    grid-template-columns: minmax(88px, .7fr) minmax(0, 1.3fr);
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px !important;
+    border-bottom: 1px solid rgba(30,41,59,.07);
+    text-align: right !important;
+    overflow-wrap: anywhere;
+  }
+  .resource-table td::before { content: attr(data-label); color: var(--text-secondary); font-size: .78rem; font-weight: 650; text-align: left; }
+  .resource-table td:last-child { width: 100%; max-width: none; border-bottom: 0; }
+  .resource-actions { justify-content: flex-end; }
+  .dashboard-hero, .resource-hero { gap: 16px; }
+  .dashboard-primary-action { width: 100%; justify-content: center; }
+  .app-topbar, .dashboard-content { width: 100%; max-width: 100vw; }
+  .dashboard-content { padding: 14px; }
+  .dashboard-panel { padding: 16px; }
+  .mini-calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+  .mini-calendar-grid button { width: 100%; min-width: 0; aspect-ratio: 1; height: auto; }
+  .modal-backdrop { padding: 10px; }
+  .resource-modal { width: 100%; max-height: calc(100dvh - 20px); }
+}
+
+@media (max-width: 420px) {
+  .dashboard-content { padding: 10px; }
+  .app-topbar { padding: 10px; }
+  .app-topbar > div strong { font-size: .92rem; }
+  .metric-grid { grid-template-columns: 1fr; }
+  .resource-table td { grid-template-columns: 78px minmax(0,1fr); }
+}

@@ -1,3 +1,5 @@
+// configuração e estrutura do banco de dados
+
 const Database = require('better-sqlite3')
 const path = require('path')
 
@@ -6,6 +8,12 @@ const db = new Database(path.join(__dirname, 'banco.db'))
 db.pragma('foreign_keys = ON')
 
 db.exec(`CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT,nome TEXT NOT NULL,email TEXT UNIQUE NOT NULL,senha_hash TEXT NOT NULL)`)
+
+// Adiciona suporte ao login com Google sem apagar usuários existentes.
+const usuarioCols = db.prepare(`PRAGMA table_info(usuarios)`).all().map(c => c.name)
+if (!usuarioCols.includes('google_sub')) db.exec(`ALTER TABLE usuarios ADD COLUMN google_sub TEXT`)
+if (!usuarioCols.includes('auth_provider')) db.exec(`ALTER TABLE usuarios ADD COLUMN auth_provider TEXT NOT NULL DEFAULT 'local'`)
+db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google_sub ON usuarios(google_sub) WHERE google_sub IS NOT NULL`)
 db.exec(`CREATE TABLE IF NOT EXISTS pacientes (id INTEGER PRIMARY KEY AUTOINCREMENT,nome TEXT NOT NULL,cpf TEXT NOT NULL,data_nascimento TEXT NOT NULL,sexo TEXT,telefone TEXT NOT NULL,email TEXT NOT NULL,cep TEXT,rua TEXT,numero TEXT,complemento TEXT,bairro TEXT,cidade TEXT,estado TEXT,usuario_id INTEGER NOT NULL,FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE)`)
 db.exec(`CREATE TABLE IF NOT EXISTS especialidades (id INTEGER PRIMARY KEY AUTOINCREMENT,nome TEXT NOT NULL,descricao TEXT,status TEXT NOT NULL DEFAULT 'ativo',usuario_id INTEGER NOT NULL,FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE)`)
 db.exec(`CREATE TABLE IF NOT EXISTS medicos (id INTEGER PRIMARY KEY AUTOINCREMENT,nome TEXT NOT NULL,cpf TEXT NOT NULL,crm TEXT NOT NULL,estado_crm TEXT NOT NULL,telefone TEXT NOT NULL,email TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'ativo',foto TEXT,especialidade_id INTEGER NOT NULL,usuario_id INTEGER NOT NULL,FOREIGN KEY(especialidade_id) REFERENCES especialidades(id),FOREIGN KEY(usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE)`)
@@ -43,7 +51,7 @@ db.exec(`INSERT OR IGNORE INTO medico_especialidades(medico_id,especialidade_id,
 
 
 // -----------------------------------------------------------------------------
-// SEGURANÇA MULTIUSUÁRIO NO PRÓPRIO BANCO
+// segurança multiusuário no próprio banco
 // Além dos filtros das rotas, estes gatilhos impedem vínculos entre contas.
 // Assim uma consulta da conta A nunca pode apontar para paciente/médico/
 // especialidade da conta B, mesmo que uma rota futura seja implementada errado.

@@ -1,3 +1,4 @@
+// Rotas de cadastro e gestão de pacientes.
 const express = require('express')
 const router = express.Router()
 
@@ -8,7 +9,7 @@ const {
   emailValido
 } = require('../helpers/validacao')
 
-// LISTAR PACIENTES DO USUÁRIO LOGADO
+// visualizar lista de pacientes
 router.get('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -27,7 +28,7 @@ router.get('/', (req, res, next) => {
   }
 })
 
-// BUSCAR PACIENTE POR ID
+// visualizar pacientes por id
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -53,7 +54,7 @@ router.get('/:id', (req, res, next) => {
   }
 })
 
-// CADASTRAR PACIENTE
+// cadastrar pacientes
 router.post('/', (req, res, next) => {
   try {
     const usuarioId = req.usuario.id
@@ -155,7 +156,7 @@ router.post('/', (req, res, next) => {
   }
 })
 
-// EDITAR PACIENTE
+// editar pacientes
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
@@ -272,7 +273,7 @@ router.put('/:id', (req, res, next) => {
   }
 })
 
-// EXCLUIR PACIENTE
+// excluir pacientes
 router.delete('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)

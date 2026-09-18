@@ -231,3 +231,6 @@ svg {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Nenhuma tela deve criar rolagem horizontal no viewport. */
+html, body, #root { width: 100%; max-width: 100%; overflow-x: hidden; }

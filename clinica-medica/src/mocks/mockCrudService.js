@@ -1,3 +1,5 @@
+// dados e funções usados no modo de teste
+
 import { mockDatabase } from './mockData.js';
 import { clone, createId, normalizeSearch, waitMock } from './mockUtils.js';
 
@@ -92,6 +94,7 @@ export const mockCrudService = {
   },
 };
 
+// função para find record
 function findRecord(resource, id) {
   const record = mockDatabase[resource]?.find((item) => item.id === id);
 
@@ -102,6 +105,7 @@ function findRecord(resource, id) {
   return record;
 }
 
+// função para find index
 function findIndex(resource, id) {
   const index = mockDatabase[resource]?.findIndex((item) => item.id === id) ?? -1;
 

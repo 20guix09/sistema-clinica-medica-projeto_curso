@@ -1,3 +1,5 @@
+// comunicação deste recurso com a API
+
 import { apiRequest, shouldUseMocks } from './api.js';
 import { ENDPOINTS } from './endpoints.js';
 import { mockConsultasService } from '../mocks/mockConsultasService.js';

@@ -1,3 +1,5 @@
+// rotas da API deste recurso
+
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from '../App.jsx';
 import AuthPreview from '../pages/AuthPreview.jsx';

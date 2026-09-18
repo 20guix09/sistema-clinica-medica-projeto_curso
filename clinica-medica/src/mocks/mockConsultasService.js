@@ -1,3 +1,5 @@
+// dados e funções usados no modo de teste
+
 import { mockCrudService } from './mockCrudService.js';
 
 export const mockConsultasService = {

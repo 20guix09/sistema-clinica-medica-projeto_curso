@@ -1,8 +1,11 @@
+// contexto compartilhado do sistema
+
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
+// componente auth provider
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => authService.getCurrentUser());
   const [token, setToken] = useState(() => authService.getToken());
@@ -10,6 +13,13 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     const session = await authService.login(credentials);
+    setUser(session.user);
+    setToken(session.token);
+    return session;
+  }, []);
+
+  const loginGoogle = useCallback(async (credential) => {
+    const session = await authService.loginGoogle(credential);
     setUser(session.user);
     setToken(session.token);
     return session;
@@ -31,16 +41,18 @@ export function AuthProvider({ children }) {
       cadastro,
       isAuthenticated,
       login,
+      loginGoogle,
       logout,
       token,
       user,
     }),
-    [cadastro, isAuthenticated, login, logout, token, user],
+    [cadastro, isAuthenticated, login, loginGoogle, logout, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// hook para auth
 export function useAuth() {
   const context = useContext(AuthContext);
 

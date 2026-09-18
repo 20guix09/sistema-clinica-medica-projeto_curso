@@ -1,3 +1,5 @@
+// comunicação deste recurso com a API
+
 import { tokenStorage } from './tokenStorage.js';
 
 const DEFAULT_TIMEOUT = 12000;
@@ -16,10 +18,12 @@ export class ApiError extends Error {
   }
 }
 
+// função para should use mocks
 export function shouldUseMocks() {
   return API_CONFIG.useMocks;
 }
 
+// função para api request
 export async function apiRequest(endpoint, options = {}) {
   const {
     auth = true,
@@ -88,6 +92,7 @@ export async function apiRequest(endpoint, options = {}) {
   }
 }
 
+// função para parse response
 async function parseResponse(response) {
   if (response.status === 204) return null;
 
