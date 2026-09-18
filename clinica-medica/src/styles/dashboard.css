@@ -1,6 +1,8 @@
 .app-frame {
   display: grid;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   grid-template-columns: 260px minmax(0, 1fr);
   color: var(--text);
   background:
@@ -170,7 +172,11 @@
 
 .app-workspace {
   min-width: 0;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
+
 
 .mobile-menu-trigger,
 .mobile-sidebar-backdrop {
@@ -1234,6 +1240,14 @@
 @media (max-width: 760px) {
   .app-frame {
     display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-workspace {
+    height: auto;
+    overflow: visible;
   }
 
   .app-sidebar {
