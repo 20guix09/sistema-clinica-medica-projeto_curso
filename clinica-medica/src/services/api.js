@@ -6,7 +6,7 @@ const DEFAULT_TIMEOUT = 12000;
 
 export const API_CONFIG = {
   baseUrl: (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, ''),
-  useMocks: import.meta.env.VITE_USE_MOCKS !== 'false',
+  useMocks: import.meta.env.VITE_USE_MOCKS === 'true',
 };
 
 export class ApiError extends Error {
@@ -39,8 +39,11 @@ export async function apiRequest(endpoint, options = {}) {
   }
 
   const controller = new AbortController();
+  const abortFromExternal = () => controller.abort(signal?.reason);
+  if (signal?.aborted) abortFromExternal();
+  else signal?.addEventListener('abort', abortFromExternal, { once: true });
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  const requestSignal = signal ?? controller.signal;
+  const requestSignal = controller.signal;
   const token = tokenStorage.getToken();
 
   try {
@@ -57,6 +60,11 @@ export async function apiRequest(endpoint, options = {}) {
     });
 
     const data = await parseResponse(response);
+
+    if (response.status === 401 && auth) {
+      tokenStorage.clear();
+      window.dispatchEvent(new CustomEvent('medagenda:unauthorized'));
+    }
 
     if (!response.ok) {
       const message =
@@ -76,6 +84,7 @@ export async function apiRequest(endpoint, options = {}) {
     return data;
   } catch (error) {
     if (error.name === 'AbortError') {
+      if (signal?.aborted) throw new ApiError('A requisição foi cancelada.', { status: 499 });
       throw new ApiError('A requisição demorou mais que o esperado.', { status: 408 });
     }
 
@@ -89,6 +98,7 @@ export async function apiRequest(endpoint, options = {}) {
     });
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', abortFromExternal);
   }
 }
 

@@ -39,7 +39,7 @@ router.get('/',(req,res,next)=>{try{
 router.get('/:id',(req,res,next)=>{try{
   const u=req.usuario.id,id=Number(req.params.id),m=carregar(id,u)
   if(!m)return res.status(404).json({erro:'Médico não encontrado'})
-  const disponibilidades=db.prepare(`SELECT id,dia_semana,horario_inicio,horario_fim FROM disponibilidades_medicos WHERE medico_id=?`).all(id)
+  const disponibilidades=db.prepare(`SELECT d.id,d.dia_semana,d.horario_inicio,d.horario_fim FROM disponibilidades_medicos d JOIN medicos m ON m.id=d.medico_id WHERE d.medico_id=? AND m.usuario_id=?`).all(id,u)
   res.json({...m,disponibilidades})
 }catch(e){next(e)}})
 // cadastrar medico
@@ -68,6 +68,9 @@ router.put('/:id',(req,res,next)=>{try{
   const ids=idsEspecialidades(req.body); const finalIds=ids.length?ids:ex.especialidade_ids
   if(!validarEspecialidades(finalIds,u))return res.status(400).json({erro:'Uma ou mais especialidades não pertencem a esta conta'})
   const v={...ex,...req.body}
+  const erros=validarObrigatorios(v,['nome','cpf','crm','estado_crm','telefone','email'])
+  const erroStatus=validarLista('status',v.status,['ativo','inativo']); if(erroStatus)erros.push(erroStatus)
+  if(erros.length)return res.status(400).json({erros})
   if(v.email&&!emailValido(v.email))return res.status(400).json({erro:'Email com formato inválido'})
   if(db.prepare(`SELECT 1 FROM medicos WHERE cpf=? AND usuario_id=? AND id!=?`).get(v.cpf,u,id))return res.status(409).json({erro:'CPF já cadastrado'})
   if(db.prepare(`SELECT 1 FROM medicos WHERE crm=? AND usuario_id=? AND id!=?`).get(v.crm,u,id))return res.status(409).json({erro:'CRM já cadastrado'})

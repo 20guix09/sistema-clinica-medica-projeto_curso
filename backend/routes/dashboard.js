@@ -3,6 +3,7 @@ const express = require('express')
 const router = express.Router()
 
 const db = require('../database')
+const { dataHojeNoFuso } = require('../helpers/validacao')
 
 // visualizar consultas de hoje
 router.get('/consultas-hoje', (req, res, next) => {
@@ -36,11 +37,11 @@ router.get('/consultas-hoje', (req, res, next) => {
         ON consultas.especialidade_id = especialidades.id
         AND especialidades.usuario_id = consultas.usuario_id
 
-      WHERE DATE(consultas.data) = DATE('now', 'localtime')
+      WHERE consultas.data = ?
       AND consultas.usuario_id = ?
 
       ORDER BY consultas.horario
-    `).all(usuarioId)
+    `).all(dataHojeNoFuso(), usuarioId)
 
     res.status(200).json(consultasHoje)
 
@@ -102,8 +103,8 @@ router.get('/summary', (req, res, next) => {
       SELECT COUNT(*) AS total
       FROM consultas
       WHERE usuario_id = ?
-      AND DATE(data) = DATE('now', 'localtime')
-    `).get(usuarioId)
+      AND data = ?
+    `).get(usuarioId, dataHojeNoFuso())
 
     const pacientesCadastrados = db.prepare(`
       SELECT COUNT(*) AS total

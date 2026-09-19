@@ -88,6 +88,12 @@ router.put('/:id',(req,res,next)=>{try{
   const ex=db.prepare(`SELECT * FROM consultas WHERE id=? AND usuario_id=?`).get(id,u)
   if(!ex)return res.status(404).json({erro:'Consulta não encontrada'})
   const v={...ex,...req.body}
+  const erros=validarObrigatorios(v,['paciente_id','medico_id','especialidade_id','data','horario','tipo'])
+  const erroStatus=validarLista('status',v.status,['pendente','confirmada','finalizada','cancelada']); if(erroStatus)erros.push(erroStatus)
+  if(erros.length)return res.status(400).json({erros})
+  if (req.body.data !== undefined || req.body.horario !== undefined) {
+    const erroDataHorario=validarDataHorarioFuturo(v.data,v.horario); if(erroDataHorario)return res.status(400).json({erro:erroDataHorario})
+  }
   const ev=validarVinculos(u,v.paciente_id,v.medico_id,v.especialidade_id); if(ev)return res.status(400).json({erro:ev})
   db.prepare(`UPDATE consultas SET paciente_id=?,medico_id=?,especialidade_id=?,data=?,horario=?,tipo=?,status=?,observacao=? WHERE id=? AND usuario_id=?`).run(
     v.paciente_id,v.medico_id,v.especialidade_id,v.data,v.horario,v.tipo,v.status,v.observacao,id,u)

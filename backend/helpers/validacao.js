@@ -55,9 +55,23 @@ function emailValido(email) {
 }
 
 
+function dataHojeNoFuso() {
+  const fuso = process.env.APP_TIME_ZONE || 'America/Sao_Paulo'
+  const partes = new Intl.DateTimeFormat('en-CA', { timeZone: fuso, year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date())
+  const v = Object.fromEntries(partes.map(({type,value}) => [type,value]))
+  return `${v.year}-${v.month}-${v.day}`
+}
+
+function idValido(valor) {
+  const id = Number(valor)
+  return Number.isInteger(id) && id > 0
+}
+
 module.exports = {
   validarObrigatorios,
   validarRange,
   validarLista,
-  emailValido
+  emailValido,
+  dataHojeNoFuso,
+  idValido
 }

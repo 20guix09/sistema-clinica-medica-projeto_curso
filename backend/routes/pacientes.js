@@ -6,7 +6,9 @@ const db = require('../database')
 
 const {
   validarObrigatorios,
-  emailValido
+  emailValido,
+  dataHojeNoFuso,
+  idValido
 } = require('../helpers/validacao')
 
 // visualizar lista de pacientes
@@ -32,6 +34,7 @@ router.get('/', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    if (!idValido(id)) return res.status(400).json({ erro: 'ID inválido' })
     const usuarioId = req.usuario.id
 
     const paciente = db.prepare(`
@@ -84,7 +87,7 @@ router.post('/', (req, res, next) => {
       erros.push('Email com formato inválido')
     }
 
-    const hoje = new Date().toISOString().slice(0, 10)
+    const hoje = dataHojeNoFuso()
     if (nasc && nasc > hoje) {
       erros.push('A data de nascimento não pode ser futura')
     }
@@ -160,6 +163,7 @@ router.post('/', (req, res, next) => {
 router.put('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    if (!idValido(id)) return res.status(400).json({ erro: 'ID inválido' })
     const usuarioId = req.usuario.id
 
     const existente = db.prepare(`
@@ -191,10 +195,13 @@ router.put('/:id', (req, res, next) => {
       est
     } = req.body
 
-    if (email && !emailValido(email)) {
-      return res.status(400).json({
-        erro: 'Email com formato inválido'
-      })
+    const finais = { nome: nome ?? existente.nome, cpf: cpf ?? existente.cpf, nasc: nasc ?? existente.data_nascimento,
+      tel: tel ?? existente.telefone, email: email ?? existente.email, num: num ?? existente.numero, comp: comp ?? existente.complemento }
+    const erros = validarObrigatorios(finais, ['nome','cpf','nasc','tel','email','num','comp'])
+    if (erros.length) return res.status(400).json({ erros })
+
+    if (finais.email && !emailValido(finais.email)) {
+      return res.status(400).json({ erro: 'Email com formato inválido' })
     }
 
     const numeroFinal = num ?? existente.numero
@@ -204,7 +211,7 @@ router.put('/:id', (req, res, next) => {
     }
 
     if (nasc) {
-      const hoje = new Date().toISOString().slice(0, 10)
+      const hoje = dataHojeNoFuso()
       if (nasc > hoje) return res.status(400).json({ erro: 'A data de nascimento não pode ser futura' })
     }
 
@@ -277,6 +284,7 @@ router.put('/:id', (req, res, next) => {
 router.delete('/:id', (req, res, next) => {
   try {
     const id = Number(req.params.id)
+    if (!idValido(id)) return res.status(400).json({ erro: 'ID inválido' })
     const usuarioId = req.usuario.id
 
     const existente = db.prepare(`

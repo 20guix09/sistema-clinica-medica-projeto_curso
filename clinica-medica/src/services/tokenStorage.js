@@ -8,10 +8,27 @@ function canUseStorage() {
   return typeof window !== 'undefined' && Boolean(window.localStorage);
 }
 
+
+function tokenValido(token) {
+  if (!token) return false;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return Number.isFinite(payload.exp) && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export const tokenStorage = {
   getToken() {
     if (!canUseStorage()) return null;
-    return localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!tokenValido(token)) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
+    return token;
   },
 
   setToken(token) {

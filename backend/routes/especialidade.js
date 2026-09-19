@@ -49,12 +49,18 @@ router.put('/:id', (req, res, next) => {
     const existente = db.prepare(`SELECT * FROM especialidades WHERE id = ? AND usuario_id = ?`).get(id, usuarioId)
     if (!existente) return res.status(404).json({ erro: 'Especialidade não encontrada' })
     const { nome, descricao, status } = req.body
+    const nomeFinal = nome ?? existente.nome
+    const statusFinal = status ?? existente.status
+    const erros = validarObrigatorios({ nome: nomeFinal }, ['nome'])
+    const erroStatus = validarLista('status', statusFinal, ['ativo','inativo'])
+    if (erroStatus) erros.push(erroStatus)
+    if (erros.length) return res.status(400).json({ erros })
     if (nome) {
       const duplicada = db.prepare(`SELECT id FROM especialidades WHERE nome = ? COLLATE NOCASE AND usuario_id = ? AND id != ?`).get(nome.trim(), usuarioId, id)
       if (duplicada) return res.status(409).json({ erro: 'Especialidade já cadastrada nesta conta' })
     }
     db.prepare(`UPDATE especialidades SET nome=?, descricao=?, status=? WHERE id=? AND usuario_id=?`).run(
-      nome?.trim() || existente.nome, descricao ?? existente.descricao, status ?? existente.status, id, usuarioId
+      nomeFinal.trim(), descricao ?? existente.descricao, statusFinal, id, usuarioId
     )
     res.json(db.prepare(`SELECT * FROM especialidades WHERE id=? AND usuario_id=?`).get(id, usuarioId))
   } catch (err) { next(err) }

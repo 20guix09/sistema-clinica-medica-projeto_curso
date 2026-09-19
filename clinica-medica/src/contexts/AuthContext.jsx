@@ -1,6 +1,6 @@
 // contexto compartilhado do sistema
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
@@ -9,7 +9,13 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => authService.getCurrentUser());
   const [token, setToken] = useState(() => authService.getToken());
-  const isAuthenticated = Boolean(token);
+  const isAuthenticated = Boolean(token && user);
+
+  useEffect(() => {
+    const encerrarSessao = () => { setUser(null); setToken(null); };
+    window.addEventListener('medagenda:unauthorized', encerrarSessao);
+    return () => window.removeEventListener('medagenda:unauthorized', encerrarSessao);
+  }, []);
 
   const login = useCallback(async (credentials) => {
     const session = await authService.login(credentials);
